@@ -1,0 +1,8 @@
+*[disabled] {
+    cursor: not-allowed !important;
+}
+
+a, button, *[role="button"], input[type="checkbox"] {
+    cursor: pointer;
+}
+
