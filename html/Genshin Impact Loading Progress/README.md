@@ -1,3 +1,43 @@
-# IMPORTANT
+# Genshin Impact Loading Progress
+Usage:
 
-`This is not finished. The script is bugful. If you want to try it, download this directory and open "loading.htm".`
+`<script src="progress_2.js"></script>`
+
+`<script>`
+
+`
+let progress = new GenshinImpactLoadingProgressClass();
+`
+
+`
+progress.show();
+`
+
+`
+// Do your thing...
+`
+
+`
+progress.value = YourValue;
+`
+
+`
+// Completed
+`
+
+`
+progress.value = 100;
+progress.hide();
+`
+
+`
+// Destroy after use
+`
+
+`
+progress.destroy();
+`
+
+`</script>`
+
+See live demo [here](https://shc0743.github.io/).
