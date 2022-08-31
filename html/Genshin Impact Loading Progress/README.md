@@ -40,4 +40,4 @@ progress.destroy();
 
 `</script>`
 
-See live demo [here](https://shc0743.github.io/).
+See live demo [here](https://shc0743.github.io/test/demo/GenshinImpactLoadingProgress/).
