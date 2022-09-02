@@ -54,6 +54,23 @@ prog.show()
 Show the progress. Call this after init.
 ```
 ```
+prog.toggle()
+Toggle the progress visible state.
+```
+```
+prog.getState()
+Get current state.
+[Return value] [Object]{
+    state: {
+        value: [value],
+        min: [min],
+        max: [max],
+        visible: [Visible],
+        visibility: ((0 -> Hidden)|(1 -> Shown)|(2 -> Hiding))
+    }
+}
+```
+```
 prog.redraw()
 Redraw backdrop for the progress. Please call this when parent element (or page) resize.
 ```
