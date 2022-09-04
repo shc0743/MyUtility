@@ -44,6 +44,10 @@ Get or set the max value for the progress.
 prog.value [=NewValue]
 Get or set the current value for the progress.
 ```
+```
+prog.setRange(minValue, maxValue)
+Set the range for the progress.
+```
 
 ```
 prog.hide()
@@ -57,6 +61,12 @@ Show the progress. Call this after init.
 prog.toggle()
 Toggle the progress visible state.
 ```
+
+```
+prog.getHalfGeoValue()
+Get the value when "Half Geo".
+```
+
 ```
 prog.getState()
 Get current state.
