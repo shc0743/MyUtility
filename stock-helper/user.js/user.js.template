@@ -1,0 +1,168 @@
+// ==UserScript==
+// @name         Stock Helper Userscript on site [Placeholder: server]
+// @namespace    host-[Placeholder: server]
+// @version      1.2.7
+// @description  try to take over the world!
+// @author       You
+// @match        *://[Placeholder: server][Placeholder: app_path]*
+// @match        *://stockpage.10jqka.com.cn/realHead_v2.html*cb05a5d7c5d942be9150fec1084b01ca=enabled*
+// @match        *://basic.10jqka.com.cn/*/finance.html*cb05a5d7c5d942be9150fec1084b01ca=enabled*
+// @grant        none
+// @run-at       document-start
+// ==/UserScript==
+
+/*
+User Script for Stock Helper
+Version: 1.2.7
+Author: [shc0743](https://github.com/shc0743)
+License: GPL-3.0
+
+*/
+
+
+(function () {
+
+    /* Secure server code */
+    function srv() {
+        let api = function () {
+
+        };
+
+        api.version = '1.2.7';
+
+        window['__my_stock_helper_api__'] = api;
+    }
+
+    if (location.host == '[Placeholder: server]') return srv();
+    /* End Secure server code */
+    
+
+    // Check access privilege
+    if (getUrlValue('cb05a5d7c5d942be9150fec1084b01ca') !== 'enabled') return false;
+
+
+    // fuck stopNesting.js
+    let _old_eval = window.eval;
+    window.eval = function efilter(str) {
+        if (str.indexOf('try{window.parent.location.hostname}') !== -1) {
+            console.warn('[WARN] 10jqka is trying to check window.parent!\n' +
+                '(Action blocked by Stock Helper Userscript on site [Placeholder: server])');
+            return void (0);
+        }
+        return _old_eval.apply(window, arguments);
+    }
+
+    // main loop
+
+    if (location.href.indexOf('stockpage.10jqka.com.cn/realHead_v2.html') !== -1)
+        exec_realHead_v2();
+
+    if (location.href.indexOf('basic.10jqka.com.cn/') !== -1 &&
+        location.href.indexOf('/finance.html') !== -1)
+        exec_finance();
+    
+    
+    
+    /* Start Main Functions */
+
+    function exec_realHead_v2() {
+        if (getUrlValue('mpost') === 'time') {
+            let delay = Number(getUrlValue('delay'));
+            if (isNaN(delay)) delay = 2000;
+
+            function exec() {
+                try {
+                    let hash = location.hash;
+                    hash = hash.substring(1);
+                    if (hash.length < 6) throw new Error('Failed to get hash');
+                    $.ajax({ // 10jqka uses jQuery and they add required params in $.ajax
+                        url: `//d.10jqka.com.cn/v2/realhead/${hash}/last.js`,
+                        method: 'get',
+                        success: function (result, status, xhr) {
+                            parent.postMessage({
+                                n: 1,
+                                type: 'error',
+                                stock: hash,
+                                data: {
+                                    code: xhr.status,
+                                    stat: xhr.statusText,
+                                    text: result
+                                }
+                            }, '*')
+                        },
+                        error: function (err) {
+                            parent.postMessage({
+                                n: 1,
+                                type: 'error',
+                                stock: hash,
+                                error: {
+                                    code: err.status,
+                                    stat: err.statusText,
+                                    text: err.responseText
+                                }
+                            }, '*')
+                        }
+                    })
+                }
+                catch (err) {
+                    parent.postMessage({
+                        n: 1,
+                        type: 'error',
+                        // stock: hash,
+                        error: String(err)
+                    }, '*')
+                }
+            }
+            setInterval(exec, delay);
+            setTimeout(exec, 1000);
+        }
+
+
+        function gtdom(q) { // get text from dom
+            let dom = document.querySelector(q);
+            if (dom) return dom.innerText;
+            else return null;
+        }
+
+    }
+
+    function exec_finance() {
+
+        addCSS(`
+        #top_thead {
+            display: none !important;
+        }
+        `);
+
+
+    }
+
+    
+    
+    
+    /* End Main Functions */
+    
+    
+
+    /* Tool functions */
+
+    function addCSS(text) {
+        let css = document.createElement('style');
+        css.innerHTML = text;
+        document.head.append(css);
+    }
+
+    function getUrlValue(name) {
+        var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+        var r = window.location.search.substring(1).match(reg);
+        if (r != null) {
+            try {
+                return decodeURIComponent(r[2]);
+            } catch (e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+}())

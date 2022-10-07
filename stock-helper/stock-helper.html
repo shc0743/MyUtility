@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票信息查询</title>
+
+    <style>
+        a:any-link, a[href], button, input[type=button], details > summary {
+            cursor: pointer;
+        }
+        *:disabled, *[disabled] {
+            cursor: not-allowed !important;
+        }
+        a[disabled] {
+            color: gray !important;
+        }
+    </style>
+
+    <style>
+        .wrapper {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            overflow: hidden;
+        }
+        .wrapper > main {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            /* height: 100%; */
+            padding: 10px;
+        }
+        .wrapper footer {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
+        .wrapper > * > div.info.output {
+            overflow: auto;
+            flex: 1;
+        }
+        .wrapper > * > div.info.output section {
+            margin-top: 10px;
+        }
+        .wrapper > * > div.info.output section details table,
+        .wrapper > * > div.info.output section details table * {
+            border: 1px solid #ccc;
+            border-collapse: collapse;
+            padding: 5px;
+            box-sizing: border-box;
+        }
+        .wrapper > * > div.info.output section details table *:not(:nth-child(1)) {
+            --comment-width: 100%;
+            /* flex: 1; */
+        }
+        .wrapper > * > div.info.output section details table thead tr td:nth-child(1) {
+            --comment-min-width: 120px;
+        }
+        .wrapper > * > div.info.output section details iframe.detail-frame-full {
+            border: 1px solid #ccc;
+            display: block;
+            height: 80vh;
+            width: calc(100% - 8px);
+            box-sizing: border-box;
+        }
+        .wrapper .error-message {
+            color: red;
+            user-select: all;
+        }
+    </style>
+
+    <style>
+        #stock_code.invalid {
+            border-color: red; 
+        }
+        #extension_not_exists_warning {
+            border: 3px ridge #d00;
+            padding: 10px 20px 20px 20px;
+            font-family: Consolas, monospace;
+        }
+        #extension_not_exists_warning .btns {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        #extension_not_exists_warning a {
+            color: blue;
+        }
+    </style>
+
+    <script>
+        function delay (fn, timeout) {
+            return function () {
+                return setTimeout(function () {
+                    return fn.apply(fn, arguments);
+                }, timeout, arguments);
+            }
+        }
+    </script>
+</head>
+<body>
+    
+    <div>
+        <div class="wrapper">
+            <main>
+
+                <div class="info input">
+                    <form id="stock_code_input_wrapper" onsubmit="return false">
+                        <label style="display:flex;flex-direction:row">
+                            <span>输入股票代码:</span>
+                            <span>&nbsp;</span>
+                            <input id=stock_code type="number" placeholder="示例: 000001" type="number" min=1 max=999999 value="" style="flex: 1" autofocus />
+                            <span>&nbsp;&nbsp;</span>
+                            <span><button type="submit">查询</button></span>
+                        </label>
+                    </form>
+                </div>
+
+                <hr style="border: 0; margin: 5px auto" />
+
+                <section style="margin-bottom: 10px">
+                    <button type="button" id="expand_all">全部展开</button>
+                    <button type="button" id="collapse_all">全部收起</button>
+                    <button type="button">展开后 按 Ctrl+F 查找</button>
+                    <button type="button" id="view_in_10jqka">在 10jqka 中查看</button>
+                    <button type="button" id="install_extension" disabled>正在加载</button>
+                </section>
+                
+                <section>
+                    <div id="load_error_message" class="error-message"></div>
+                </section>
+
+                <my-container class="iframe-container" style="display:none!important">
+                    <!-- iframe container -->
+                </my-container>
+
+                <div class="info output">
+                    <section data-mytext="self-selected">
+                        <details>
+                            <summary>自选</summary>
+                            <div style="padding: 10px;">
+                                <div class="error-message"></div>
+
+                                <details>
+                                    <summary>自选股</summary>
+                                    <div>
+                                        <table>
+                                            <thead>
+                                                <tr class="template--sizer-add-cell">
+                                                    <td>股票代码</td>
+                                                    <td>股票名称</td>
+                                                    <td>操作</td>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </details>
+
+                                <details>
+                                    <summary>可用数据</summary>
+                                    <div>
+                                        <table>
+                                            <thead>
+                                                <tr class="template--sizer-add-cell">
+                                                    <td>Status</td>
+                                                    <td>数据</td>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </details>
+
+                                <details>
+                                    <summary>显示的数据</summary>
+                                    <div>
+                                        <table>
+                                            <thead>
+                                                <tr class="template--sizer-add-cell">
+                                                    <td>Name</td>
+                                                    <td>Value</td>
+                                                </tr>
+                                            </thead>
+
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </details>
+
+                            </div>
+                        </details>
+                    </section>
+
+                    <section data-mytext="base_info">
+                        <details>
+                            <summary>基本信息</summary>
+                            <div>
+                                <div class="error-message"></div>
+                                <table>
+                                    <thead>
+                                        <tr class="template--sizer-add-cell">
+                                            <td>Name</td>
+                                            <td>Value</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stock_info_base">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section data-mytext="finance">
+                        <details>
+                            <summary>财务分析</summary>
+                            <div>
+                                <iframe src="data:text/html;charset=utf-8,请先查询!" class="detail-frame-full"></iframe>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section data-mytext="finance">
+                        <details>
+                            <summary>数据计算</summary>
+                            <div>
+                                <div class="error-message"></div>
+                                <table>
+                                    <thead>
+                                        <tr class="template--sizer-add-cell">
+                                            <td>Name</td>
+                                            <td>Value</td>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="stock_info_data_result">
+                                        
+                                    </tbody>
+                                </table>
+                            </div>
+                        </details>
+                    </section>
+
+
+                </div>
+
+                <footer>
+                    <div style="color: gray; text-align: center;">数据来源: <a target="_blank" href="https://10jqka.com.cn/" style="color: gray">同花顺</a></div>
+                </footer>
+
+            </main>
+        </div>
+    </div>
+
+    <div>
+        <dialog id="extension_not_exists_warning">
+            <div lang="en" hidden>
+                <h1 style="text-align:center">WARNING</h1>
+                <p>
+                    The browser extension is not installed correctly.<br>
+                    Without browser extension, you can only view basic information (and may fail).
+                </p>
+                <section class="btns">
+                    <div>Do you want to install the extension now?</div>
+                    <div>
+                        <a href="javascript:void 0" onclick="InstallExtension({element:this})">Install now</a>
+                        (<a href="javascript:howToInstallExtension.showModal()">How to install?</a>)
+                        or
+                        <a href="javascript:extension_not_exists_warning.close()">ignore</a>.
+                    </div>
+                </section>
+            </div>
+            <div lang="zh-cn">
+                <h1 style="text-align:center">警告</h1>
+                <p>
+                    浏览器扩展未正确安装。<br>
+                    如果没有浏览器扩展，您只能查看基本信息（并且可能会失败）。
+                </p>
+                <section class="btns">
+                    <div>您想现在安装扩展吗？</div>
+                    <div>
+                        <a href="javascript:void 0" onclick="InstallExtension({element:this})">立即安装</a>
+                        (<a href="javascript:howToInstallExtension.showModal()">如何安装？</a>)
+                        或
+                        <a href="javascript:extension_not_exists_warning.close()">忽略</a>。
+                    </div>
+                </section>
+            </div>
+
+        </dialog>
+
+        <dialog id="howToInstallExtension">
+            <pre lang="en" hidden>
+First, click [Install now].
+Then, drag the downloaded file to your userscript manager.
+Final, reload the page.
+            </pre>
+            <pre lang="zh-cn">
+首先，单击[立即安装]。
+然后，将下载的文件拖动到您的用户脚本管理器。
+最后，重新加载页面。
+            </pre>
+            <button onclick="this.parentElement.close()">OK</button>
+        </dialog>
+
+        <script>
+            if (HTMLUnknownElement.prototype.isPrototypeOf(extension_not_exists_warning)) {
+                // support for old browsers
+                extension_not_exists_warning.style.display = 'none';
+                howToInstallExtension.style.display = 'none';
+            }
+            window.addEventListener('load', function () {
+                install_extension.innerHTML = '正在检查';
+                delay(function () {
+                    if (typeof (window.__my_stock_helper_api__) === 'undefined') {
+                        install_extension.innerHTML = '安装浏览器扩展';
+                        install_extension.disabled = false;
+                        extension_not_exists_warning.showModal();
+                    }
+                    else {
+                        install_extension.innerHTML = '(检查更新...) 已安装浏览器扩展';
+
+                        fetch('extension.version')
+                        .then((v) => {return v.text()})
+                        .then(d => {
+                            if (d !== window.__my_stock_helper_api__.version) {
+                                install_extension.disabled = false;
+                                install_extension.innerHTML = '(!) 更新可用';
+                                install_extension.style.color = 'red';
+                            }
+                            else install_extension.innerHTML = '已安装浏览器扩展';
+                        })
+                        .catch(new(Function)(`install_extension.innerHTML = '(无法检查更新) 已安装浏览器扩展'`));
+                    }
+                }, 500)();
+            }, { once: true });
+
+        </script>
+    </div>
+
+
+    <script src="stock-helper-main.js"></script>
+    <script async src="stock-helper-calc.js"></script>
+
+    <script>
+        document.querySelectorAll('.template--sizer-add-cell td').forEach(el => {
+            el.addEventListener('mousemove', function (ev) {
+                let rect = ev.target.getBoundingClientRect();
+                let start_x = rect.right - ev.x;
+                if (start_x <= 10) {
+                    ev.target.style.cursor = 'e-resize';
+
+                    if (ev.target.__is_ready_to_resize) {
+                        function F (e) {
+                            ev.target.style.minWidth = e.x - rect.left + start_x + 'px';
+                        }
+                        document.addEventListener('mousemove', F, true);
+                        document.addEventListener('mouseup', function () {
+                            document.removeEventListener('mousemove', F, true);
+                            delete (ev.target.__is_ready_to_resize);
+                        }, { once: true });
+                        delete (ev.target.__is_ready_to_resize);
+                    }
+                } else {
+                    ev.target.style.cursor = '';
+                }
+            });
+            el.addEventListener('mousedown', function (ev) {
+                ev.target.__is_ready_to_resize = true;
+            });
+            el.addEventListener('mouseup', function (ev) {
+                if (ev.target.__is_ready_to_resize)
+                    delete (ev.target.__is_ready_to_resize);
+            });
+        });
+    </script>
+
+</body>
+</html>
