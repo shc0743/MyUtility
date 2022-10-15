@@ -41,6 +41,9 @@
             <span>Mouse: </span>
             <span id="imouse">null</span>
         </div>
+        <div class="right bottom" title="click to toggle">
+            <span id="ihos">Hide/Show</span>
+        </div>
     </div>
 
     <style>
@@ -233,6 +236,11 @@
         }
         imouse.parentElement.onclick = function (ev) {
             prog.value = prog.getHalfGeoValue()
+        }
+
+        ihos.parentElement.onclick = function (ev) {
+            prog.getState().state.visible ?
+            prog.hide() : prog.show();
         }
 
         var kd_data = {
