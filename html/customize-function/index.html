@@ -98,7 +98,7 @@
                     <span style="font-size:x-large;">主公式</span>
                 </legend>
 
-                <label><input class="myinput primary" type="text" name="u_main" id="u_main" autocomplete="off" required></label>
+                <label><input class="myinput primary" type="text" name="u_main" id="u_main" autocomplete="off" autofocus required></label>
                 <div class="fn-error-text" style="color:red"></div>
             </fieldset>
 
@@ -197,6 +197,7 @@
         <script>
             compute.onclick = function () {
                 let expr = _data.source;
+                expr = expr.substring(expr.indexOf('=') + 1);
                 document.querySelectorAll('tbody > *').forEach(el => {
                     let title = el.querySelector('[data-type=name]').getAttribute('title');
                     let content = el.querySelector('[contenteditable]').innerText;
