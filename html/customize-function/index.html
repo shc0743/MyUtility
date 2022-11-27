@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>自定义函数</title>
+    <style>
+        a, button {
+            cursor: pointer;
+        }
+        *:disabled {
+            cursor: not-allowed !important;
+        }
+
+        input.myinput {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            line-height: 1em;
+            background: #FCFCFC;
+            transition: 0.2s;
+            font-size: large;
+
+            border: 1px solid var(--border-color);
+
+            --border-color: #aaa;
+        }
+        input.myinput.primary {
+            font-size: large;
+        }
+        input.myinput:focus,
+        input.myinput:focus-visible {
+            outline: none;
+            --border-color: gray;
+        }
+        input.myinput:valid {
+            --border-color: #2ba186;
+        }
+        .invalid > input.myinput:not(:focus) {
+            --border-color: #ff596a;
+        }
+        input.myinput:hover:not(:disabled) {
+            background: #F0F0F0;
+        }
+
+        #u_data label.invalid:not(:focus-within)::after {
+            content: "* Invalid content";
+            display: block;
+            color: #ff596a;
+            text-align: left;
+            font-family: Consolas, monospace;
+            margin-bottom: 0.5rem;
+        }
+
+        #u_data > fieldset {
+            margin-bottom: 15px;
+        }
+        #u_data .btn-group {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+        }
+        #u_data .btn-group button {
+            margin: 0 10px;
+            padding: 10px;
+            flex: 1;
+        }
+        #u_data .btn-group.primary button {
+            font-size: x-large;
+        }
+        #u_data .btn-group button:nth-child(1) {
+            margin-left: 0;
+        }
+        #u_data .btn-group button:nth-last-child(1) {
+            margin-right: 0;
+        }
+        #u_data .preview-iframe {
+            border: none;
+            box-sizing: border-box;
+            width: 100%;
+            height: 50vh;
+        }
+
+        #u_main:disabled {
+            color: gray;
+        }
+    </style>
+</head>
+<body>
+    
+<div>
+    <main>
+        <form id="u_data">
+            <fieldset>
+                <legend>
+                    <span style="font-size:x-large;">主公式</span>
+                </legend>
+
+                <label><input class="myinput primary" type="text" name="u_main" id="u_main" autocomplete="off" required></label>
+                <div class="fn-error-text" style="color:red"></div>
+            </fieldset>
+
+            <fieldset data-name="args">
+                <legend>参数</legend>
+                <div>
+                    <style>
+                        #u_data [data-name="args"] table {
+                            --border-color: #ccc;
+
+                            box-sizing: border-box;
+                            width: 100%;
+                        }
+                        #u_data [data-name="args"] table,
+                        #u_data [data-name="args"] table tr,
+                        #u_data [data-name="args"] table td {
+                            border: 1px solid var(--border-color);
+                        }
+                        #u_data [data-name="args"] table td {
+                            padding: 5px;
+                        }
+                        #u_data [data-name="args"] [data-meaning] input {
+                            box-sizing: border-box;
+                            width: 100%;
+                        }
+                    </style>
+
+                    <table>
+                        <thead>
+                            <td style="width:4em">名称</td>
+                            <td style="width:calc(100% - 4em)">意义</td>
+                        </thead>
+
+                        <tbody class="fn_data_args"></tbody>
+                    </table>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>预览</legend>
+                <details>
+                    <summary>预览</summary>
+                    <iframe class="preview-iframe"></iframe>
+                </details>
+            </fieldset>
+
+            <fieldset>
+                <legend>保存</legend>
+                <div class="save-options btn-group">
+                    <button type="button" disabled data-action="saveas">另存为</button>
+                    <button type="button" disabled data-action="download">下载</button>
+                </div>
+            </fieldset>
+
+            <div class="btn-group primary">
+                <button type="submit">继续</button>
+                <button type="reset">重置</button>
+            </div>
+        </form>
+    </main>
+</div>
+
+<template id="template:#4f53fd67-a313-49a9-b739-2e8885f6e430">
+    <tr class="var-info-row">
+        <td data-name></td>
+        <td data-meaning>
+            <input type="text" autocomplete="off" required />
+        </td>
+    </tr>
+</template>
+
+<template id="template:#dd4a8331-05cd-4f22-8486-968433627879">
+    <div>
+        <script>{{Placeholder: data}}</script>
+
+        <h1>{{Placeholder: fn}}</h1>
+
+
+        <style>
+            table td {
+                padding: 5px;
+            }
+        </style>
+
+        <table border="1">
+            <tbody>
+
+            </tbody>
+        </table>
+
+        <br>
+
+        <button id="compute">计算</button>
+        <output style="display:block" id="result"></output>
+
+        <script>
+            compute.onclick = function () {
+                let expr = _data.source;
+                document.querySelectorAll('tbody > *').forEach(el => {
+                    let title = el.querySelector('[data-type=name]').getAttribute('title');
+                    let content = el.querySelector('[contenteditable]').innerText;
+                    expr = expr.replaceAll(title, content);
+                });
+                try {
+                    let $result = eval(expr);
+                    let $text = `${_data.x.text}: ${$result}`;
+                    result.innerText = $text;
+                }
+                catch (Error) {
+                    result.innerText = `计算失败 (${Error})。\n此问题可能是由于您没有输入正确的数据;或表达式存在问题。`;
+                }
+            }
+        </script>
+    </div>
+</template>
+
+<template id="template:#8f902bdf-8ce9-4b76-ac2d-cbf6a0b98ce5">
+    <tr>
+        <td data-type="name"></td>
+        <td data-type="value" style="min-width:200px" contenteditable></td>
+    </tr>
+</template>
+
+<script>
+(function () {
+    const u_data = document.getElementById('u_data');
+    const u_main = document.getElementById('u_main');
+    if (!u_data || !u_main) {
+        return document.write('错误: 无法找到 u_data');
+    }
+
+    const t_arg_row = document.getElementById('template:#4f53fd67-a313-49a9-b739-2e8885f6e430');
+    const t_subdoc = document.getElementById('template:#dd4a8331-05cd-4f22-8486-968433627879');
+
+    u_data.addEventListener('blur', function (ev) {
+        if (ev.target.tagName.toLowerCase() !== 'input') return;
+        ev.target.parentElement.classList[(ev.target.checkValidity()) ? 'remove' : 'add']('invalid');
+    }, true);
+
+
+    let data_step = 0;
+    let u_command = '';
+    let u_fn = null;
+    let finalBlob = null;
+    let blobUrl = '';
+
+    u_data.querySelector('button[type=reset]')?.addEventListener('click', function (ev) {
+        // ev.preventDefault();
+
+        data_step = 0;
+        (u_data.querySelector('.fn_data_args')||{}).innerHTML = '';
+        if (blobUrl) URL.revokeObjectURL(blobUrl);
+        finalBlob = null;
+        u_fn = null;
+        enableformitem(u_data, true);
+        u_data.querySelectorAll('.save-options>button').forEach(el => el.disabled = true);
+    });
+
+    u_data.querySelector('iframe.preview-iframe')?.contentWindow.document.write('没有预览。');
+
+    (u_data.querySelector('.save-options button[data-action=saveas]')||{}).onclick =
+      (async function (ev) {
+        ev.target.disabled = true;
+        try {
+            // create a new handle
+            const newHandle = await window.showSaveFilePicker({
+                types: [{
+                    description: 'HTML',
+                    suggestedName: String(new(Date)),
+                    accept: {'text/html': ['.html','.htm']},
+                },{
+                    description: '文本文件',
+                    suggestedName: String(new(Date)),
+                    accept: {'text/plain': ['.txt']},
+                }],
+            });
+
+            // create a FileSystemWritableFileStream to write to
+            const writableStream = await newHandle.createWritable();
+
+            // write our file
+            await writableStream.write(finalBlob);
+
+            // close the file and write the contents to disk.
+            await writableStream.close();
+
+        }
+        catch (error) { }
+        ev.target.disabled = false;
+    });
+    (u_data.querySelector('.save-options button[data-action=download]')||{}).onclick = function (ev) {
+        if (!blobUrl) return;
+        let A = document.createElement('a');
+        A.href = blobUrl;
+        A.download = u_command + '.html';
+        document.body.append(A);
+        A.click();
+        A.remove();
+    };
+
+    u_data.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+
+        switch (data_step) {
+            case 0:
+                return step0(ev);
+                break;
+
+            case 1:
+                return step1(ev);
+                break;
+        
+            default:
+                return false;
+        }
+
+    });
+
+
+    function step0(ev) {
+        u_command = u_main.value;
+        (u_data.querySelector('.fn-error-text') || {}).innerText = '';
+        const fda = u_data.querySelector('.fn_data_args');
+        
+        let fn = parse_fn(u_command);
+        u_fn = fn;
+        if (fn.ERROR) {
+            console.error('解析失败:', fn);
+            (u_data.querySelector('.fn-error-text') || {}).innerText = fn.$Error;
+            return;
+        }
+        console.log('成功解析:', fn);
+        enableformitem(u_data, false);
+
+        (async function () {
+            {
+                const node = t_arg_row.content.cloneNode(true);
+                node.querySelector('tr').$name = 
+                node.querySelector('[data-name]').innerText = fn.x;
+                fda.append(node);
+            }
+            for (const i of fn.vars) {
+                const node = t_arg_row.content.cloneNode(true);
+                node.querySelector('tr').$name = 
+                node.querySelector('[data-name]').innerText = i.text;
+                node.querySelector('tr').$_data = i;
+                fda.append(node);
+            }
+
+            (u_data.querySelectorAll('button[type=submit],button[type=reset],[data-meaning] input')).forEach(el => el.disabled = false);
+
+            data_step = 1;
+
+        }()).catch(function (err) {
+            console.error('解析失败:', err);
+            (u_data.querySelector('.fn-error-text') || {}).innerText = err;
+            enableformitem(u_data, true);
+        });
+    }
+
+
+    async function step1(ev) {
+        let doc = t_subdoc.content.cloneNode(true).firstElementChild;
+        doc.querySelector('h1').innerText = u_command;
+
+        let data = {
+            source: u_command.replaceAll('^', '**'),
+            vars: []
+        };
+        u_data.querySelectorAll('.var-info-row').forEach(el => {
+            if (!el.$_data) {
+                data.x = {};
+                data.x.name = u_fn.x;
+                data.x.text = (el.querySelector('[data-meaning] input') || {}).value;
+                return;
+            }
+            let varinfo = {};
+            varinfo.name = el.$name;
+            varinfo.text = (el.querySelector('[data-meaning] input') || {}).value;
+            data.vars.push(varinfo);
+
+            try {
+                const el = document.getElementById('template:#8f902bdf-8ce9-4b76-ac2d-cbf6a0b98ce5').content.cloneNode(true).firstElementChild;
+                el.querySelector('[data-type=name]').innerText = varinfo.text;
+                el.querySelector('[data-type=name]').setAttribute('title', varinfo.name);
+
+                doc.querySelector('tbody').append(el);
+            }
+            catch {}
+        });
+        let jsondata = JSON.stringify(data);
+        doc.querySelector('script').innerHTML = 'window._data = ' + jsondata;
+
+        let body = doc.innerHTML;
+
+        let codeParts = [];
+        codeParts.push`<!DOCTYPE HTML>`;
+        codeParts.push`<`;
+        codeParts.push`html`;
+        codeParts.push`><`;
+        codeParts.push`head><meta charset=utf-8 />`;
+        codeParts.push`<title>fn</title><`;
+        codeParts.push`/head><`;
+        codeParts.push`body>`;
+        codeParts.push(body);
+        codeParts.push`</`;
+        codeParts.push`body></`;
+        codeParts.push`html>`;
+
+        finalBlob = new Blob(codeParts, { type: 'text/html' });
+        blobUrl = URL.createObjectURL(finalBlob);
+
+        enableformitem(u_data, false);
+
+        u_data.querySelectorAll('button[type=reset],.save-options>button').forEach(el => el.disabled = false);
+        
+        u_data.querySelector('iframe.preview-iframe').src = blobUrl;
+
+    }
+
+
+
+    function parse_fn(data) {
+        let o = { source: data, vars: [] };
+        let v_temp = '';
+        let v_temp_info = {};
+        const operators = { 
+            ' ': null, '\t': null,
+            '.': null,
+            '+': null, '-': null, '*': null, '/': null,
+            '^': null,
+            '~': null, '!': null, '%': null, '&': null,
+        };
+        const brackets = {
+            '(': null, ')': null,
+            '[': null, ']': null,
+            '{': null, '}': null,
+        };
+
+        for (let i = 0; i < data.length; ++i) {
+            const $d = data[i];
+            if (!o.x) {
+                if ($d === '=') {
+                    if (i === 0) {
+                        o.ERROR = true;
+                        o.$Error = new SyntaxError('Invalid expression');
+                        break;
+                    }
+                    o.x = data.substring(0, i);
+                }
+                continue;
+            }
+            if ($d === '=') {
+                o.ERROR = true;
+                o.$Error = new SyntaxError('Invalid character: \'=\'');
+                break;
+            }
+
+            if ($d in operators || $d in brackets) {
+                // 是运算符
+                continue;
+            }
+
+            if (!isNaN(Number($d))) {
+                let $i = i;
+                let needContinue = false;
+                for (; $i >= 0; $i--) {
+                    if (data[$i] in operators || data[$i] in brackets) {
+                        // 是数字
+                        needContinue = true;
+                        break;
+                    }
+                    if (isNaN(data[$i])) {
+                        break;
+                    }
+                }
+                if (needContinue) continue;
+            }
+
+            // 是变量
+
+            if (!(v_temp_info.start)) {
+                v_temp_info.start = i;
+            }
+            v_temp += $d;
+
+            if (data[i+1] in operators || data[i+1] in brackets || i+1 >= data.length) {
+                // 这已经是这个变量的最后一个字母了
+                v_temp_info.text = v_temp;
+                v_temp_info.end = i;
+                if (isNaN(Number(v_temp)))
+                    o.vars.push(v_temp_info);
+                v_temp = '';
+                v_temp_info = {};
+                continue;
+            }
+            
+            
+        }
+        if (!o.x) {
+            o.ERROR = true;
+            o.$Error = new SyntaxError('function not found');
+        }
+        return o;
+    }
+
+
+    function enableformitem(form, bEnable = true) {
+        form.querySelectorAll('input,button').forEach(el=>el.disabled=!bEnable);
+        form[(bEnable?'remove':'set')+'Attribute']('disabled', true);
+    }
+
+
+}());
+</script>
+    
+</body>
+</html>
