@@ -1,3 +1,31 @@
+/*
+module name: BindMove.js
+exports: 
+    ProductId
+    addCSS      (utility)
+    BindMove
+    UnBindMove
+
+
+To import this script:
+* Download and use ES6 import
+* or load it online:
+    (async function () {
+        const resp = await fetch('https://raw.githubusercontent.com/shc0743/MyUtility/main/js/BindMove.js');
+        let blob = await resp.blob();
+        const newBlob = new Blob([blob], { type: 'text/javascript' });
+        const url = URL.createObjectURL(newBlob);
+        const _Mymodule = await import(url);
+        URL.revokeObjectURL(url);
+        return _Mymodule;
+    })()
+    .then(() => [Your code...] )
+    .catch(error => [error handler])
+
+
+*/
+
+
 
 const ProductId = 'fdf3404207ac433293f97c1dd3ca103a';
 export { ProductId };
