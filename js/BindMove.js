@@ -12,10 +12,10 @@ To import this script:
 * or load it online:
     (async function () {
         const resp = await fetch('https://raw.githubusercontent.com/shc0743/MyUtility/main/js/BindMove.js');
-        let blob = await resp.blob();
+        const blob = await resp.blob();
         const newBlob = new Blob([blob], { type: 'text/javascript' });
         const url = URL.createObjectURL(newBlob);
-        const _Mymodule = await import(url);
+        let _Mymodule = await import(url);
         URL.revokeObjectURL(url);
         return _Mymodule;
     })()
