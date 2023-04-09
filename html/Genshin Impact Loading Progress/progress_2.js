@@ -199,18 +199,26 @@
         }
 
         getHalfGeoValue() {
-            let rect = this.__elem_ch1F__.lastElementChild;
-            if (rect) rect = rect.getBoundingClientRect();
-            else throw new Error(StringTable[0xE005]);
-            let px = rect.x + (rect.width / 2);
+            if (0) {
+                let rect = this.__elem_ch1F__.lastElementChild;
+                if (rect) rect = rect.getBoundingClientRect();
+                else throw new Error(StringTable[0xE005]);
+                let px = rect.x + (rect.width / 2);
 
-            let rc2 = this.__elem_ch1F__.firstElementChild.getBoundingClientRect();
-            let min = rc2.x, max = rc2.x + (rc2.width * this.__elem_ch1F__.childElementCount);
-            let area = max - min;
-            let percent = (px - min) / area;
-            let value = percent * (this.max - this.min) + this.min;
+                let rc2 = this.__elem_ch1F__.firstElementChild.getBoundingClientRect();
+                let min = rc2.x, max = rc2.x + (rc2.width * this.__elem_ch1F__.childElementCount);
+                let area = max - min;
+                let percent = (px - min) / area;
+                let value = percent * (this.max - this.min) + this.min;
+                
+                return value;
+            } else {
+                let val1 = this.__elem_ch1F__.childElementCount;
+                let percent = ((val1 - 1 + 0.5) / val1)
+                let value = percent * (this.max - this.min) + this.min;
+                return value;
+            }
 
-            return value;
         }
 
         getState() {
@@ -249,6 +257,10 @@
 
         moveTo(element) {
             return element.append(this.__elem_root__);
+        }
+
+        setSvgSize(size) {
+            this.__elem_root__.style.setProperty(`--svgsize`, ` ${size}px`);
         }
 
         redraw() {
@@ -369,4 +381,4 @@
         (document.head || document.documentElement).append(c);
     }
     
-}((typeof (exports) === "undefined" ? window : exports) || window));
+}((typeof (globalThis) === "undefined" ? window : globalThis) || window));
