@@ -125,10 +125,10 @@
         way: go to the includes directory in the SDK, but I don't think anyone would do this). After opening, you still need to
         use an editor to search for this macro. Finally, a few minutes passed and the corresponding number for this small macro
         was finally found. Oh! If I could use these things directly in Python, it'll be great! So, this tool was created.</p>
-        <p>Although it cannot convert ALL C/C++ statements, but for most situations, it is enough to just use some simple word
+        <p>Although it cannot convert ALL C/C++ statements, for most situations, it is enough to just use some simple word
         instead of number in the code.</p>
-        <p>Example:</p>
-        <pre>import * from WinUser<br>import ctypes<br>ctypes.WinDLL('user32').SendMessage(blabla, WM_CLOSE, 0, 0)</pre>
+        <p>Example: (<a href="./demos/WinUser.py" target="_blank" download="WinUser.py">download the example WinUser.py (this file is BIG modified, some contents were deleted but it can be imported directly in Python)</a>)</p>
+        <pre style="user-select: all;">from WinUser import *<br>import ctypes<br>ctypes.WinDLL('user32').SendMessageW(ctypes.WinDLL('user32').GetForegroundWindow(), WM_CLOSE, 0, 0) # close the foreground window</pre>
         <div><button onclick="this.parentElement.parentElement.close()">Close</button></div>
     </dialog>
 
