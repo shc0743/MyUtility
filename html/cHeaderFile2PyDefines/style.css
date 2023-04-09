@@ -1,0 +1,86 @@
+a, button {
+    cursor: pointer;
+}
+a {
+    color: blue;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
+
+
+#container {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+#app {
+    padding: var(--padding);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-1);
+    background-color: #fafafa;
+    box-shadow: 0 0 var(--box-shadow-size) 0 #e7e7e7;
+    overflow: auto;
+    max-width: var(--max-size);
+    max-height: var(--max-size);
+
+    --border-color: #ccc;
+    --border-radius-1: 10px;
+    --border-radius-2: 5px;
+    --padding: 10px;
+    --box-shadow-size: 10px;
+    --max-size: calc(100% - (2 * var(--padding)) - (2 * var(--box-shadow-size)) - 1em);
+}
+#app fieldset {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-2);
+}
+#app button {
+    font-family: inherit;
+}
+
+#app #prog > div {
+    display: flex;
+}
+#app #prog > div > .prog-inner {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+#app #prog > div > .prog-inner > progress {
+    margin: 0 10px;
+    flex: 1;
+}
+#app #result_cont {
+    border: 1px solid;
+    border-radius: 10px;
+    background-color: white;
+    padding: 0.5em 0;
+}
+#app #result_cont>div {
+    padding: 5px 15px;
+}
+#app #result_cont>div:hover {
+    background-color: #f0f0f0;
+}
+#app #result_cont>div+div {
+    margin-top: 0.5em;
+}
+#app #result_cont > div .close-button {
+    float: right;
+    opacity: 0;
+}
+#app #result_cont > div:hover .close-button, #app #result_cont > div:focus-within .close-button {
+    opacity: 1;
+}
+#app:has(#saveAll:disabled) #result_cont > div .close-button,
+#app:has(#saveAll:disabled) #next {
+    display: none !important;
+}
+
+

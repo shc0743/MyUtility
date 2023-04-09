@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<!-- For license info, see [LICENSE.html] -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C/C++ Header File to Python Definitions Converter</title>
+    <link rel="stylesheet" href="./element-plus.css">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+
+    <div id="container">
+        <div id="app" style="font-family: 'Consolas', monospace;">
+            <form id="mainForm">
+                <h2>C/C++ Header File to Python Definitions Converter</h2>
+        
+                <fieldset id="step1">
+                    <legend>Step 1: Choose C/C++ Header File</legend>
+
+                    <div style="color: red; margin-bottom: 10px;">
+                        <b>Warning</b><span>:</span>
+                        <span>Please DO NOT upload non-text files, or it will take you VERY VERY LONG TIME and output trash data!!</span>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <b>Caption</b><span>:</span>
+                        <span>This tool is not perfect, because there are lots of differences between C/C++ and Python (such as strong types, macro function, #include, #if pre-compile, ...), it cannot convert all of them. To use the converted file, you might need to edit some of its content manually. <a href="javascript:" onclick="what_can_this_do.showModal()">What can this do?</a></span>
+                    </div>
+                    <file-picker-ui id="filePicker" accept=".c,.cpp,.cxx,.cc,.h,.hpp" multiple required></file-picker-ui>
+
+                </fieldset>
+
+                <fieldset id="step2" hidden>
+                    <legend>Step 2: Start Worker</legend>
+
+                    <div style="color: gray; margin-bottom: 10px;"><span id="cvt_cnt"></span> file(s) chosen</div>
+                    <button class="el-button el-button--primary is-plain" type="button" style="width: 100%; height: auto;" id="startWorker">Start Worker</button>
+                </fieldset>
+
+                <fieldset id="step3" hidden>
+                    <legend>Step 3: Convert Options</legend>
+
+                    <div>
+                        <table>
+                            <tr>
+                                <td>Input Line-Break</td>
+                                <td><select id="LB_i"><option value="r">CR</option><option value="n" selected>LF</option><option value="rn">CRLF</option></select></td>
+                            </tr>
+                            <tr>
+                                <td>Output Line-Break</td>
+                                <td><select id="LB_o"><option value="r">CR</option><option value="n" selected>LF</option><option value="rn">CRLF</option></select></td>
+                            </tr>
+                        </table>
+                    </div>
+                </fieldset>
+
+                <fieldset id="step4" hidden>
+                    <legend>Step 4: Convert</legend>
+
+                    <div style="color: gray; margin-bottom: 10px;">While converting, please do not close this tab</div>
+                    <div id="prog" style="display: flex; flex-direction: column;">
+                        <div>
+                            <span>Current</span>
+                            <span class="prog-inner"><progress id="prog_Pc"></progress><span id="prog_Tc"></span></span>
+                        </div>
+                        <div>
+                            <span>Total</span>
+                            <span class="prog-inner"><progress id="prog_Pt"></progress><span id="prog_Tt"></span></span>
+                        </div>
+                    </div>
+                    <!-- Meanings
+                        Pc ->       Progress::current
+                        Pt ->       Progress::total
+                        Tc ->       Text::current
+                        Tt ->       Text::total
+                    -->
+                </fieldset>
+
+                <fieldset id="step5" hidden>
+                    <legend>Step 5: OK</legend>
+
+                    <div>These are your files. You can either download one of them or download all.</div>
+                    <div style="margin: 10px 0; display: flex; flex-direction: column;">
+                        <button class="el-button el-button--primary is-plain" type="button" style="flex: 1" id="downloadAll">Download All (not recommended)</button>
+                        <span style="margin-top: 0.3em;"></span><button class="el-button el-button--primary is-plain" type="button" style="flex: 1; height: auto" id="saveAll">Save to a directory (recommended)</button>
+                    </div>
+                    <div id="result_cont"></div>
+                </fieldset>
+
+                <div style="margin-top: 1em; text-align: right;">
+                    <button class="el-button el-button--primary is-plain is-disabled" type="submit" id="next" disabled>Next Step</button>
+                    <button class="el-button is-plain el-button--danger" type="reset" id="reset" onclick="window.location.reload()">Reset</button>
+                </div>
+
+                <div style="margin-top: 0.5em; text-align: center; font-size: small; color: gray;">
+                    <a href="./LICENSE.html" target="_blank">LICENSE: GPL-3.0</a>
+                    <span>|</span>
+                    <span>by <a href="https://github.com/shc0743" target="_blank">shc0743</a></span>
+                </div>
+            </form>
+
+            <dialog id="saveFile_progress" oncancel="return false">
+                <div>Saving changes into: <span id="saveFile_current"></span></div>
+                <div id="saveFile_conflict" style="margin-top: 0.5em" hidden>
+                    <p>File already exists. Do you want to override?</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr;">
+                        <button class="el-button is-plain" type="button" data-action="y">Yes</button>
+                        <button class="el-button is-plain" type="button" data-action="ya">Yes to All</button>
+                        <button class="el-button is-plain" type="button" data-action="ar">Auto Rename</button>
+                        <button class="el-button is-plain" type="button" data-action="n" style="margin-left: 0; margin-top: 0.5em">No</button>
+                        <button class="el-button is-plain" type="button" data-action="na" style="margin-top: 0.5em">No to All</button>
+                        <button class="el-button is-plain" type="button" data-action="mr" style="margin-top: 0.5em">Manual Rename</button>
+                    </div>
+                </div>
+            </dialog>
+        </div>
+    </div>
+
+    <dialog id="what_can_this_do">
+        <p>This tool can convert macro definitions in C/C++ header files into normal Python statements. This is useful in some situations,
+        for example, when you want to call some Windows APIs, which require some macros. Oh My god! What is the value of this macro?
+        You have to search online, but the search results only show the usage and related functions of this thing.
+        Now, either you have to open some bulky IDEs or use some global search tools to find this header file (there is another
+        way: go to the includes directory in the SDK, but I don't think anyone would do this). After opening, you still need to
+        use an editor to search for this macro. Finally, a few minutes passed and the corresponding number for this small macro
+        was finally found. Oh! If I could use these things directly in Python, it'll be great! So, this tool was created.</p>
+        <p>Although it cannot convert ALL C/C++ statements, but for most situations, it is enough to just use some simple word
+        instead of number in the code.</p>
+        <p>Example:</p>
+        <pre>import * from WinUser<br>import ctypes<br>ctypes.WinDLL('user32').SendMessage(blabla, WM_CLOSE, 0, 0)</pre>
+        <div><button onclick="this.parentElement.parentElement.close()">Close</button></div>
+    </dialog>
+
+    <script src="./filePicker.js"></script>
+    <script src="./main.js"></script>
+    
+</body>
+</html>
