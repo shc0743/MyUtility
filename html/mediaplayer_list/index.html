@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Player</title>
+    <link rel="stylesheet" href="./themes.css">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./site_theme.css">
+</head>
+<body>
+
+    <div style="border: 1px solid; padding: 10px; margin: 10px 0;">This product uses <b>flv.js</b></div>
+    <script src="./flvjs/flv.min.js"></script>
+
+    <div id="player">
+        <video-container id="video_container" tabindex="0"></video-container>
+        <my-widget open no-focus-box id="playctl" class="active" style="left: 0; top: 0; min-width: 300px; min-height: 200px; width: 300px; height: 260px;">
+            <widget-caption slot=widget-caption>
+                <span>Play Control [F4]</span>
+            </widget-caption>
+
+            <div>
+                <div class="is-flex"><a href="javascript:" class="ui-btn flex-1" onclick="window.dispatchEvent(new KeyboardEvent('keydown',{bubbles:true,cancelable:true,key:'F6'}))">Playlist</a><button class="ui-btn" id="playctl_fixed">Fixed</button></div>
+                <div class="is-flex mg-top-05em"><button class="ui-btn flex-1" id="startPlay"></button><button class="ui-btn" onclick="video_container.focus()">Hide</button></div>
+                <div class="is-flex mg-top-05em flex-alit-c"><span id="p_progress" class="mg-right-05em"></span><button id="pause" class="ui-btn flex-1">Pause/Play</button></div>
+                <div class="is-flex mg-top-05em"><input type="range" id="p_pbar" class="flex-1" min="0" max="1" value="0" disabled></div>
+                <div class="is-flex mg-top-05em"><button class="ui-btn flex-1" id="prev" title="Previous" aria-label="Previous media" disabled>&lt;</button><button class="ui-btn flex-1" id="next" title="Next" aria-label="Next media" disabled>&gt;</button></div>
+                <div class="is-flex mg-top-05em"><span>Play Speed:&nbsp;</span><input type="number" id="playSpeed" class="flex-1" min="-5" max="100" value="1" step="0.5"></div>
+            </div>
+
+        </my-widget>
+
+        <my-widget open no-focus-box style="right: 0; top: 0; min-width: 240px; min-height: 300px; width: 240px; height: 300px;">
+            <widget-caption slot=widget-caption>
+                <span>Playlist [F6]</span>
+                <button class="close-widget">x</button>
+            </widget-caption>
+
+            <div id="playlist" class="is-flex flex-col">
+                <div id="playlist_control"><!--
+                    --><a href="javascript:" class="ui-btn is-square is-larger" id="pl_add" title="Add an item to playlist" aria-label="Add an item to playlist">+</a><!--
+                    --><a href="javascript:" class="ui-btn is-square is-larger" id="pl_delete" title="Delete selected item from playlist" aria-label="Delete selected item from playlist">-</a><!--
+                    --><a href="javascript:" class="ui-btn is-square is-larger" id="pl_up" title="Move selected item up" aria-label="Move selected item up">^</a><!--
+                    --><a href="javascript:" class="ui-btn is-square is-larger" id="pl_down" title="Move selected item down" aria-label="Move selected item down">v</a>
+                </div>
+                <div class="is-empty">No Item</div>
+                <div id="playlist_items"></div>
+            </div>
+
+        </my-widget>
+
+        <my-widget id="playlist_add" style="position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 50%; height: 50%; white-space: nowrap;">
+            <div>Add media source(s):</div> 
+            <textarea id="playlist_addtext" rows="10"></textarea>
+            <div>
+                <button id="pl_addbtn">OK</button>
+                <button onclick="this.parentElement.parentElement.close()">Cancel</button>
+            </div>
+        </my-widget>
+    </div>
+
+    <div id="launcher">
+        <button id="launch" disabled>Loading...</button>
+    </div>
+
+    <script type="module" src="./main.js"></script>
+    
+</body>
+</html>

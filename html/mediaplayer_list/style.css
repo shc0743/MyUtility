@@ -1,0 +1,77 @@
+
+
+#launch {
+    position: fixed;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    font-size: 2rem;
+}
+
+#player {
+    position: absolute;
+    inset: 0; z-index: 101;
+    background-color: var(--color-scheme-background-color);
+}
+#player:not(.active) {
+    display: none;
+}
+#player > video-container {
+    position: absolute;
+    display: block;
+    inset: 0;
+    overflow: hidden;
+}
+.close-widget {
+    float: right;
+}
+.is-larger {
+    font-size: larger;
+}
+#playlist {
+    height: 100%;
+}
+#playlist_control {
+    padding-bottom: 1em;
+    padding-top: 0.5em;
+}
+#playlist_items {
+    border: 1px solid var(--color-scheme-border-color);
+    border-radius: 10px;
+    flex: 1;
+    overflow: auto;
+    padding: 10px;
+}
+#playlist_addtext {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    word-break: break-all;
+    margin: 10px 0;
+    padding: 10px;
+    border: 1px solid gray;
+    color: var(--color-scheme-foreground-color);
+    background-color: var(--color-scheme-background-color);
+
+    min-height: calc(50vh - (10px * 2) - (10px * 4) - 3em - 4px);
+}
+#playctl {
+    transition: opacity 0.2s;
+    opacity: 0;
+}
+#playctl:focus, #playctl:focus-within, #playctl:hover, #playctl.active, #playctl.always-active {
+    opacity: 1;
+}
+#startPlay::after {
+    content: "Start Play";
+}
+#startPlay.started::after {
+    content: "Stop Playing";
+}
+
+my-widget {
+    --background: var(--color-scheme-background-color);
+    --border-color: var(--color-scheme-border-color);
+}
+
+
