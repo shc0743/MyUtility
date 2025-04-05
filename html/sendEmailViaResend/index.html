@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Send Mail via Resend</title>
+    <style>
+        *[hidden] {
+            display: none !important;
+        }
+        a {
+            color: blue;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        #sendEmailForm input[type="url"],
+        #sendEmailForm input[type="text"],
+        #sendEmailForm input[type="email"],
+        #sendEmailForm input[type="password"] {
+            padding: 10px;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            flex: 1;
+        }
+        #sendEmailForm > label {
+            display: flex;
+            margin-bottom: 1em;
+            align-items: center;
+        }
+        #sendEmailForm > label > span {
+            display: inline-block;
+            margin-right: 0.5em;
+        }
+        #csrc_2 {
+            margin-left: 1em;
+        }
+        #content {
+            border: 1px solid #ccc;
+            padding: 10px;
+            border-radius: 10px;
+            min-height: 200px;
+            margin-top: 1em;
+        }
+        #response {
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 10px;
+        }
+
+        code {
+            background-color: #f0f0f0;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Send Mail via Resend</h1>
+    <form id="sendEmailForm" >
+        <label><span>API Key:</span><input type="password" id="key" placeholder="Enter your Resend API Key" required></label>
+        <label><span>Proxy Server:</span><input type="url" id="proxy" value="http://127.0.0.1:8993/request" required placeholder="Enter your proxy server"><a href="./proxy_server.py" style="margin-left: 0.5em;">Download server</a></label>
+        <label><span>From:</span><input type="email" multiple id="from" placeholder="Enter source email address" required></label>
+        <label><span>To: (Use <code>,</code> to add multiple)</span><input type="email" id="to" placeholder="Enter target email address" required></label>
+        <label><span>Subject:</span><input type="text" id="subject" placeholder="Enter email subject" required></label>
+        <label>
+            <span>Content source:</span>
+            <input type="radio" name="cs" id="csrc_1">
+            <label for="csrc_1">File</label>
+            <input type="radio" name="cs" id="csrc_2" checked>
+            <label for="csrc_2">Text</label>
+            <span style="display: inline-block; flex: 1;"></span>
+        </label>
+        <label id="file_picker" hidden><span>File:</span><input type="file" id="email_file"></label>
+        <div id="content" contenteditable="true"></div>
+
+        <button type="submit">Send email</button>
+    </form>
+
+    <dialog id="result">
+        <form method="dialog">
+            <div id=result_text style="font-weight: bold; margin-bottom: 0.5em; font-size: large;">Mail sent.</div>
+            <button type="submit" style="margin-bottom: 0.5em;">Close</button>
+            <pre id="response"></pre>
+        </form>
+    </dialog>
+
+    <script>
+    function processCsrcChange(ev) {
+        const csrc_1 = document.getElementById("csrc_1");
+        const file_picker = document.getElementById("file_picker");
+        const content = document.getElementById("content");
+        if (csrc_1.checked) {
+            file_picker.hidden = false;
+            content.hidden = true;
+        }
+        else {
+            file_picker.hidden = true;
+            content.hidden = false;
+        }
+    }
+    csrc_1.addEventListener("input", processCsrcChange);
+    csrc_2.addEventListener("input", processCsrcChange);
+
+    sendEmailForm.addEventListener("submit", async (ev) => {
+        ev.preventDefault();
+        const key = document.getElementById("key").value;
+        const from = document.getElementById("from").value;
+        const to = document.getElementById("to").value;
+        const subject = document.getElementById("subject").value;
+        const csrc_1 = document.getElementById("csrc_1");
+        let content = null;
+        if (csrc_1.checked) {
+            const file = document.getElementById("email_file").files[0];
+            if (!file) {
+                alert("Please select a file.");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                content = event.target.result;
+                sendEmail(key, from, to, subject, content);
+            };
+            reader.readAsText(file);
+        } else {
+            content = document.getElementById("content").innerHTML;
+            if (!content) {
+                alert("Please enter email content.");
+                return;
+            }
+            sendEmail(key, from, to, subject, content);
+        }
+    });
+
+    function myfetch(url, options) {
+        const proxy = document.getElementById("proxy").value;
+        let req;
+        if (proxy) {
+            const newurl = new URL(proxy);
+            newurl.searchParams.set("url", url);
+            req = new Request(newurl, options);
+            req.headers.set("X-Method", options.method);
+        } else {
+            throw new Error("Proxy server is not set.");
+        }
+        return fetch(req);
+    }
+
+    async function sendEmail(key, from, to, subject, content) {
+        document.querySelector('#sendEmailForm button[type="submit"]').disabled = true;
+        document.querySelector('#sendEmailForm button[type="submit"]').innerText = "Sending...";
+        try {
+            const receivers = to.split(",").map(email => email.trim()).filter(email => !!email);
+            const textContent = (()=>{
+                const el = document.createElement("div");
+                el.innerHTML = content;
+                return el.innerText;
+            })(); // convert HTML to text
+            if (receivers.length === 0) {
+                alert("Please enter at least one valid email address.");
+                return;
+            }
+            const response = await myfetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${key}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    from: from,
+                    to: receivers,
+                    reply_to: from,
+                    subject: subject,
+                    html: content,
+                    text: textContent,
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.text();
+                result_text.innerText = "Cannot send email!!";
+                document.getElementById('response').innerText = errorData;
+                const resultDialog = document.getElementById("result");
+                resultDialog.showModal();
+                return;
+            }
+
+            const responseData = await response.text();
+            result_text.innerText = "Email sent.";
+            document.getElementById('response').innerText = responseData;
+            const resultDialog = document.getElementById("result");
+            resultDialog.showModal();
+        } catch (error) {
+            console.error("Error sending email:", error);
+            alert("An error occurred while sending the email. Please try again. \n" + error);
+        } finally {
+            document.querySelector('#sendEmailForm button[type="submit"]').disabled = false;
+            document.querySelector('#sendEmailForm button[type="submit"]').innerText = "Send email";
+        }
+    }
+    </script>
+</body>
+</html>
