@@ -59,7 +59,7 @@ def main():
             elif choice == '2':
                 # 解密操作
                 print("\n[解密模式]")
-                encrypted_data = input("请输入要解密的JSON数据:")
+                encrypted_data = getpass("请输入要解密的JSON数据:")
                 key = getpass("请输入解密密钥: ")
                 while not key:
                     print("密钥不能为空!")
