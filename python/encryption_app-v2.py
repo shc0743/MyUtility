@@ -39,9 +39,6 @@ def main():
                 plaintext = get_multiline_input("请输入要加密的文本:")
                 
                 key = getpass("请输入加密密钥: ")
-                while not key:
-                    print("密钥不能为空!")
-                    key = getpass("请输入加密密钥: ")
                 
                 custom_phrase = input("可选: 输入自定义短语(留空使用随机): ").strip()
                 custom_n = input("可选: 输入Scrypt的N参数(留空使用默认262144): ").strip()
@@ -65,9 +62,6 @@ def main():
                 print("\n[解密模式]")
                 encrypted_data = getpass("请粘贴要解密的JSON数据，然后按下 Enter")
                 key = getpass("请输入解密密钥: ")
-                while not key:
-                    print("密钥不能为空!")
-                    key = getpass("请输入解密密钥: ")
                 
                 try:
                     decrypted = decrypt_data(encrypted_data, key)
@@ -112,9 +106,6 @@ def main():
                 output_file = input("请输入输出文件路径: ").strip()
                 
                 key = getpass("请输入解密密钥: ")
-                while not key:
-                    print("密钥不能为空!")
-                    key = getpass("请输入解密密钥: ")
                 
                 try:
                     success = decrypt_file(input_file, output_file, key)
