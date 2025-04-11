@@ -19,6 +19,16 @@ def get_multiline_input(prompt):
         pass
     return '\n'.join(lines)
 
+def get_password_with_empty_warning(prompt, allow_empty=True):
+    """获取密码输入，如果允许空密码则增加警告提示"""
+    while True:
+        key = getpass(prompt)
+        if not key and allow_empty:
+            confirm = input("空密码不安全！您真的要使用空密码吗？(y/N) ").strip().lower()
+            if confirm != 'y':
+                continue  # 重新输入密码
+        return key
+
 def main():
     print("=== 安全加密解密工具 ===")
     print("1. 加密文本")
@@ -38,7 +48,7 @@ def main():
                 print("\n[加密模式]")
                 plaintext = get_multiline_input("请输入要加密的文本:")
                 
-                key = getpass("请输入加密密钥: ")
+                key = get_password_with_empty_warning("请输入加密密钥: ")
                 
                 custom_phrase = input("可选: 输入自定义短语(留空使用随机): ").strip()
                 custom_n = input("可选: 输入Scrypt的N参数(留空使用默认262144): ").strip()
@@ -61,7 +71,7 @@ def main():
                 # 解密操作
                 print("\n[解密模式]")
                 encrypted_data = getpass("请粘贴要解密的JSON数据，然后按下 Enter")
-                key = getpass("请输入解密密钥: ")
+                key = get_password_with_empty_warning("请输入解密密钥: ")
                 
                 try:
                     decrypted = decrypt_data(encrypted_data, key)
@@ -76,7 +86,7 @@ def main():
                 input_file = input("请输入要加密的文件路径: ").strip()
                 output_file = input("请输入输出文件路径: ").strip()
                 
-                key = getpass("请输入加密密钥: ")
+                key = get_password_with_empty_warning("请输入加密密钥: ")
                 if not key == getpass("再输一遍 please "):
                     print('似乎输错了，要不再试一遍?')
                     continue
@@ -96,7 +106,6 @@ def main():
                     if success:
                         print(f"\n文件加密成功! 已保存到: {output_file}")
                 except Exception as e:
-                    raise e
                     print(f"文件加密失败: {str(e)}")
                 
             elif choice == '4':
@@ -105,7 +114,7 @@ def main():
                 input_file = input("请输入要解密的文件路径: ").strip()
                 output_file = input("请输入输出文件路径: ").strip()
                 
-                key = getpass("请输入解密密钥: ")
+                key = get_password_with_empty_warning("请输入解密密钥: ")
                 
                 try:
                     success = decrypt_file(input_file, output_file, key)
@@ -119,7 +128,7 @@ def main():
                 print("\n[更改文件密码模式]")
                 file_path = input("请输入要修改密码的加密文件路径: ").strip()
                 old_key = getpass("请输入原密码: ")
-                new_key = getpass("请输入新密码: ")
+                new_key = get_password_with_empty_warning("请输入新密码: ")
                 confirm_key = getpass("请再次输入新密码: ")
                 
                 if new_key != confirm_key:
@@ -138,7 +147,7 @@ def main():
                 print("\n[备份主密钥模式]")
                 file_path = input("请输入加密文件路径: ").strip()
                 current_key = getpass("请输入当前密码: ")
-                export_key = getpass("请输入用于加密备份的密码: ")
+                export_key = get_password_with_empty_warning("请输入用于加密备份的密码: ")
                 confirm_key = getpass("请再次输入加密备份的密码: ")
                 
                 if export_key != confirm_key:
@@ -162,7 +171,6 @@ def main():
         except KeyboardInterrupt:
             print("\n操作已取消")
         except Exception as e:
-            raise e
             print(f"发生错误: {str(e)}")
 
 if __name__ == "__main__":
