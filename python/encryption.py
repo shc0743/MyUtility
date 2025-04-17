@@ -134,6 +134,9 @@ def encrypt_file(input_filename, output_filename, key, phrase=None, N=None, chun
             ekey = encrypt_data(key, user_key)
             # 写入主密钥密文长度(4字节)和内容，填充到1024字节
             ekey_bytes = ekey.encode('utf-8')
+            # 添加长度检查
+            if len(ekey_bytes) > 1024:
+                raise ValueError("(Internal Error) This should not happen. Contact the application developer.")
             # 写入主密钥密文长度(4字节)和内容，填充到1024字节
             fout.write(len(ekey_bytes).to_bytes(4, 'little'))  # 使用字节长度
             fout.write(ekey_bytes)  # 写入字节数据
@@ -263,6 +266,7 @@ def decrypt_file(input_filename, output_filename, key):
         raise e
 
 def change_file_password(file, key, new_key):
+    # TODO: 在更改密码前先备份主密钥，以防止意外断电导致文件损坏
     try:
         with open(file, 'r+b') as f:
             # 验证文件格式
