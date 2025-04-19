@@ -1,0 +1,1 @@
+The encryption module has been moved to [here](https://github.com/shc0743/myencryption)
