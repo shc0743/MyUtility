@@ -19,7 +19,7 @@ def init_db(db_path: str = "certificates.db") -> None:
         sans TEXT,
         issue_date TEXT,
         expiry_date TEXT NOT NULL,
-        fingerprint TEXT NOT NULL,
+        fingerprint TEXT NOT NULL UNIQUE,
         notes TEXT
     )
     """)
@@ -27,7 +27,8 @@ def init_db(db_path: str = "certificates.db") -> None:
     # 创建索引以提高查询性能
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_domain ON certificates (domain)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_expiry ON certificates (expiry_date)")
-    
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_serial ON certificates (fingerprint)")
+
     conn.commit()
     conn.close()
 
@@ -84,12 +85,32 @@ class CertificateDB:
             """, (domain, sans, issue_date, expiry_date, fingerprint, notes))
             return cursor.lastrowid
     
-    def get_certificate(self, cert_id: int) -> Optional[Dict[str, Any]]:
+    def get_certificate(self, cert_id) -> Optional[Dict[str, Any]]:
         with self._get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("""
             SELECT id, domain, sans, issue_date, expiry_date, fingerprint, notes
             FROM certificates WHERE id = ?
+            """, (cert_id))
+            row = cursor.fetchone()
+            if row:
+                return {
+                    "id": row[0],
+                    "domain": row[1],
+                    "sans": row[2],
+                    "issue_date": row[3],
+                    "expiry_date": row[4],
+                    "fingerprint": row[5],
+                    "notes": row[6]
+                }
+            return None
+        
+    def get_certificate_by_serial(self, cert_id) -> Optional[Dict[str, Any]]:
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+            SELECT id, domain, sans, issue_date, expiry_date, fingerprint, notes
+            FROM certificates WHERE fingerprint = ?
             """, (cert_id,))
             row = cursor.fetchone()
             if row:
@@ -181,9 +202,9 @@ class CertificateDB:
             cursor.execute("""
             SELECT id, domain, sans, issue_date, expiry_date, fingerprint, notes
             FROM certificates 
-            WHERE domain LIKE ? OR sans LIKE ? OR notes LIKE ?
+            WHERE domain LIKE ? OR sans LIKE ? OR fingerprint LIKE ? OR notes LIKE ?
             ORDER BY expiry_date
-            """, (f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
+            """, (f"%{keyword}%", f"%{keyword}%", f"%{keyword}%", f"%{keyword}%"))
             return [
                 {
                     "id": row[0],
@@ -249,8 +270,8 @@ def scan(cert_path, notes):
         db = CertificateDB()
         
         # 检查指纹是否已存在
-        existing_certs = db.search_certificates(cert_info['fingerprint'])
-        if any(cert['fingerprint'] == cert_info['fingerprint'] for cert in existing_certs):
+        existing_cert = db.get_certificate_by_serial(cert_info['fingerprint'])
+        if existing_cert:
             click.echo("数据库中已存在相同指纹的证书，未添加")
             return
         
@@ -302,6 +323,15 @@ def list(verbose, all):
             expiry_date = cert['expiry_date'][:10]  # 只显示日期部分
             click.echo(f"{cert['id']:<4} {domain_display:<20} {expiry_date}")
 
+def resolve_cert_id(db: CertificateDB, cert_id_or_fingerprint: str) -> Optional[int]:
+    """
+    根据证书ID或指纹解析出数据库中的证书ID。
+    """
+    if cert_id_or_fingerprint.isdigit():
+        return int(cert_id_or_fingerprint)
+    cert = db.get_certificate_by_serial(cert_id_or_fingerprint)
+    return cert['id'] if cert else None
+
 @cli.command()
 @click.argument('keyword')
 @click.option('--verbose', '-v', is_flag=True, help='显示详细信息')
@@ -328,28 +358,35 @@ def search(keyword, verbose):
             click.echo(f"{cert['id']:<4} {domain_display:<20} {expiry_date}")
 
 @cli.command()
-@click.argument('cert_id', type=int)
-def show(cert_id):
+@click.argument('cert_id_or_fingerprint')
+def show(cert_id_or_fingerprint):
     """显示证书详情"""
     db = CertificateDB()
+    cert_id = resolve_cert_id(db, cert_id_or_fingerprint)
+    if cert_id is None:
+        click.echo(f"未找到ID或指纹为 {cert_id_or_fingerprint} 的证书", err=True)
+        return
     cert = db.get_certificate(cert_id)
-    
     if cert:
         display_certificate(cert)
     else:
-        click.echo(f"未找到ID为{cert_id}的证书", err=True)
+        click.echo(f"未找到ID为 {cert_id} 的证书", err=True)
 
 @cli.command()
-@click.argument('cert_id', type=int)
+@click.argument('cert_id_or_fingerprint')
 @click.option('--domain', help='新的域名')
 @click.option('--sans', help='新的SAN列表')
 @click.option('--issue-date', help='新的签发时间')
 @click.option('--expiry', help='新的过期时间')
 @click.option('--fingerprint', help='新的指纹')
 @click.option('--notes', help='新的备注')
-def update(cert_id, domain, sans, issue_date, expiry, fingerprint, notes):
+def update(cert_id_or_fingerprint, domain, sans, issue_date, expiry, fingerprint, notes):
     """更新证书信息"""
     db = CertificateDB()
+    cert_id = resolve_cert_id(db, cert_id_or_fingerprint)
+    if cert_id is None:
+        click.echo(f"未找到ID或指纹为 {cert_id_or_fingerprint} 的证书", err=True)
+        return
     updated = db.update_certificate(
         cert_id=cert_id,
         domain=domain,
@@ -359,21 +396,24 @@ def update(cert_id, domain, sans, issue_date, expiry, fingerprint, notes):
         fingerprint=fingerprint,
         notes=notes
     )
-    
     if updated:
         click.echo(f"证书ID {cert_id} 已更新")
     else:
-        click.echo(f"更新失败或未找到ID为{cert_id}的证书", err=True)
+        click.echo(f"更新失败或未找到ID为 {cert_id} 的证书", err=True)
 
 @cli.command()
-@click.argument('cert_id', type=int)
-def delete(cert_id):
+@click.argument('cert_id_or_fingerprint')
+def delete(cert_id_or_fingerprint):
     """删除证书"""
     db = CertificateDB()
+    cert_id = resolve_cert_id(db, cert_id_or_fingerprint)
+    if cert_id is None:
+        click.echo(f"未找到ID或指纹为 {cert_id_or_fingerprint} 的证书", err=True)
+        return
     if db.delete_certificate(cert_id):
         click.echo(f"证书ID {cert_id} 已删除")
     else:
-        click.echo(f"删除失败或未找到ID为{cert_id}的证书", err=True)
+        click.echo(f"删除失败或未找到ID为 {cert_id} 的证书", err=True)
 
 @cli.command()
 @click.argument('days', type=int, default=15)
