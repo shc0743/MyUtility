@@ -247,6 +247,13 @@ def scan(cert_path, notes):
     try:
         cert_info = parse_certificate(cert_path)
         db = CertificateDB()
+        
+        # 检查指纹是否已存在
+        existing_certs = db.search_certificates(cert_info['fingerprint'])
+        if any(cert['fingerprint'] == cert_info['fingerprint'] for cert in existing_certs):
+            click.echo("数据库中已存在相同指纹的证书，未添加")
+            return
+        
         cert_id = db.add_certificate(
             domain=cert_info['domain'],
             sans=cert_info['sans'],
@@ -261,13 +268,25 @@ def scan(cert_path, notes):
 
 @cli.command()
 @click.option('--verbose', '-v', is_flag=True, help='显示详细信息')
-def list(verbose):
-    """列出所有证书"""
+@click.option('--all', '-a', is_flag=True, help='列出所有证书，包括已过期的')
+def list(verbose, all):
+    """列出所有未过期的证书。使用 -a 或 --all 以列出所有证书。"""
     db = CertificateDB()
     certs = db.list_certificates()
     
     if not certs:
         click.echo("数据库中没有证书")
+        return
+
+    now = datetime.now(timezone.utc)  # 使用支持时区的 UTC 时间
+    if not all:
+        certs = [
+            cert for cert in certs
+            if datetime.fromisoformat(cert['expiry_date']) >= now  # 过滤未过期的证书
+        ]
+
+    if not certs:
+        click.echo("没有符合条件的证书")
         return
 
     click.echo("证书列表:")
