@@ -1,0 +1,23 @@
+{
+  "name": "bindmove",
+  "version": "1.0.0",
+  "description": "BindMove function (use browser pointer api to move a element)",
+  "main": "BindMove.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "front-end",
+    "browser",
+    "pointer",
+    "move",
+    "ui"
+  ],
+  "author": "chcs1013",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/shc0743/MyUtility/issues"
+  },
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/BindMove#readme"
+}

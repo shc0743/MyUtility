@@ -1,0 +1,21 @@
+{
+  "name": "dom-zindex-manager",
+  "version": "1.0.0",
+  "description": "zindex manager (manage Z-Index automatically)",
+  "main": "zindex-manager.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "front-end",
+    "ui",
+    "browser"
+  ],
+  "author": "chcs1013",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/shc0743/MyUtility/issues"
+  },
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/zindex-manager/#readme"
+}

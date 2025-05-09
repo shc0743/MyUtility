@@ -1,0 +1,26 @@
+{
+  "name": "resizable-widget",
+  "version": "1.0.1",
+  "description": "Create a resizable and movable widget on webpage",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "front-end",
+    "ui",
+    "widget",
+    "window"
+  ],
+  "author": "chcs1013",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/shc0743/MyUtility/issues"
+  },
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/resizable-widget#readme",
+  "dependencies": {
+    "bindmove": "^1.0.0",
+    "dom-zindex-manager": "^1.0.0"
+  }
+}
