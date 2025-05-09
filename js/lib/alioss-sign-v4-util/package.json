@@ -1,0 +1,25 @@
+{
+  "name": "alioss-sign-v4-util",
+  "version": "1.0.0",
+  "description": "Sign url or header for AliYun OSS (V4)",
+  "main": "sign.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "signature",
+    "oss",
+    "storage",
+    "cloud",
+    "sign"
+  ],
+  "author": "chcs1013",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/shc0743/MyUtility/issues"
+  },
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/alioss-sign-v4-util/#readme",
+  "dependencies": {
+    "crypto-js": "^4.2.0"
+  }
+}
