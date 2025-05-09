@@ -1,6 +1,6 @@
 {
   "name": "resizable-widget",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Create a resizable and movable widget on webpage",
   "main": "main.js",
   "type": "module",

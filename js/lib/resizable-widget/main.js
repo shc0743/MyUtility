@@ -1,4 +1,4 @@
-import { addCSS, BindMove } from 'bindmove';
+import { addCSS, BindMove, BindMove_css } from 'bindmove';
 import { ZIndexManagerClass } from 'dom-zindex-manager';
 
 
