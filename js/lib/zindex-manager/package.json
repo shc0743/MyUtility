@@ -1,6 +1,6 @@
 {
   "name": "dom-zindex-manager",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "zindex manager (manage Z-Index automatically)",
   "main": "zindex-manager.js",
   "type": "module",

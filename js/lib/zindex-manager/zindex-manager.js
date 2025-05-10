@@ -77,11 +77,13 @@ class ZIndexManagerClass {
     }
 
     activate(element) {
-        if (this.#elements.includes(element)) {
+        // 只有发生变化才更新
+        const changes = element && (element !== this.activeElement);
+        if (changes && this.#elements.includes(element)) {
             this.#elements.splice(this.#elements.indexOf(element), 1);
             this.#elements.push(element);
+            this.update();
         }
-        this.update();
     }
 
     deactivate(element) {

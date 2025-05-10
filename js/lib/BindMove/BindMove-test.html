@@ -7,16 +7,6 @@
     <title>BindMove.js test</title>
 </head>
 <body style="height: 2000px">
-
-    <script>
-        import('./BindMove.js').then(function (result) {
-            const { BindMove, UnBindMove } = result;
-            globalThis.BindMove = BindMove;
-            globalThis.UnBindMove = UnBindMove;
-            globalThis.api = result;
-        });
-    </script>
-    
     <pre class="content">
 (function () {
     const api = {};
