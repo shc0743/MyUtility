@@ -1,0 +1,22 @@
+{
+  "name": "play-video-streamed",
+  "version": "5.6.0",
+  "description": "A wrapper for streamed MP4 video playing, using MP4box",
+  "keywords": [
+    "front-end",
+    "video",
+    "play",
+    "stream"
+  ],
+  "types": "./play_video.d.ts",
+  "license": "MIT",
+  "author": "chcs1013",
+  "type": "module",
+  "main": "play_video.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "mp4box": "^0.5.4"
+  }
+}
