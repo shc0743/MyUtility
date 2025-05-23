@@ -244,10 +244,12 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
             doSeek();
         }
     }
+    let lastHadPaused = false;
     function onTimeUpdate() {
         if (isNaN(onTimeUpdate.last_time) || (video.currentTime < onTimeUpdate.last_time) || ((video.currentTime - onTimeUpdate.last_time) > Math.ceil(10 * video.playbackRate))) {
             doSeek();
             onTimeUpdate.last_time = video.currentTime;
+            lastHadPaused = false;
         }
     }
     video.addEventListener('seeked', onSeeked);
@@ -257,14 +259,16 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
     function onWaiting() {
         if (ms.original_duration - video.currentTime < 1) {
             if (Logs) console.log("Video ended");
-            if (video.loop) {
+            if (video.loop || lastHadPaused) {
                 const seek_info = mp4boxfile.seek(0, true);
                 loadSegment(seek_info.offset, seek_info.offset + bs).then(() => video.play());
                 video.currentTime = 0;
                 nextLoadShouldPlay = true;
+                lastHadPaused = false;
             } else {
                 // 使得视频在结束的时候自动暂停
                 video.pause();
+                lastHadPaused = true;
             }
         }
     }
