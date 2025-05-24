@@ -139,7 +139,7 @@ export class HTMLCommonFilePreviewElement extends HTMLElement {
             } else is_downgraded = true;
             case 'text': if (!(await configProvider.get('DisallowTextPreview') == 'true') && majorType === 'text') {
                 this.#el.classList.add('text');
-                fetch(ossUrl).then(v => v.text()).then(v => { this.#el.innerText = ''; this.#el.append(document.createTextNode(v)); }).catch(e => this.#el.innerText = `无法加载预览: ${e}`);
+                fetch(ossUrl).then(v => v.text()).then(v => { this.#el.innerText = ''; this.#el.append(document.createTextNode(v)); }).catch(e => this.#el.innerText = `${i18n('f2lp')}: ${e}`);
                 break;
             } else is_downgraded = true;
             case 'image': if (!(await configProvider.get('DisallowMediaPreview') == 'true' || await configProvider.get('DisallowImagePreview') == 'true') && majorType === 'image') {
