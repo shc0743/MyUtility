@@ -267,8 +267,6 @@ HTMLCommonFilePreviewElement.stylesheet.replace(`
 }
 :host(.media) {
     background-color: black;
-    align-items: center;
-    justify-content: center;
 }
 
 * {
