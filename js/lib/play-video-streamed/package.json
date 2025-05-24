@@ -1,6 +1,6 @@
 {
   "name": "play-video-streamed",
-  "version": "5.6.1",
+  "version": "5.6.2",
   "description": "A wrapper for streamed MP4 video playing, using MP4box",
   "keywords": [
     "front-end",

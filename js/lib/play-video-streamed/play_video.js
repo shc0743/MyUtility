@@ -1,4 +1,4 @@
-import MP4Box from 'mp4box';
+import MP4Box, { Log } from 'mp4box';
 
 let Logs = false;
 export function setLogEnabled(enabled) {
@@ -11,6 +11,10 @@ export class NotSupportError extends Error {
         super(message);
         this.name = "NotSupportError";
     }
+}
+
+export function version() {
+    return "5.6.2 Paralogism";
 }
 
 /**
@@ -90,7 +94,6 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
             sb.pendingAppends = [];
             resolve_ready();
         } else {
-            // console.error("ms not supported")
             if (Logs) console.error("ms not supported", mime);
             reject_ready(new NotSupportError("Video codec is not supported by the browser"));
         }
@@ -102,6 +105,7 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
             sb.removeEventListener('updateend', onInitAppended);
             sb.addEventListener('updateend', onUpdateEnd.bind(sb, true, true));
             /* In case there are already pending buffers we call onUpdateEnd to start appending them*/
+            if (Logs) console.log("Application", "Initialization appended", sb.segmentIndex, sb.pendingAppends.length)
             onUpdateEnd.call(sb, false, true);
             sb.ms.pendingInits--;
         }
@@ -109,22 +113,7 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
     const onUpdateEnd = function onUpdateEnd(isNotInit, isEndOfAppend) {
         if (isEndOfAppend === true) {
             if (isNotInit === true) {
-                if (this.ms.readyState === "open" && this.buffered.length > 0) {
-                    try {
-                        // 保留当前时间点附近的内容，清理之前的内容
-                        const currentTime = video.currentTime;
-                        for (let i = 0; i < this.buffered.length; i++) {
-                            const start = this.buffered.start(i);
-                            const end = this.buffered.end(i);
-                            if (end < (currentTime - 5)) { // 清理5秒前的内容
-                                this.remove(start, end);
-                                break;
-                            }
-                        }
-                    } catch (e) {
-                        if (Logs) console.warn("Error removing old buffers:", e);
-                    }
-                }
+                // 浏览器会自动清理资源。我们不需要手动清理
             }
             if (this.sampleNum) {
                 mp4boxfile.releaseUsedSamples(this.id, this.sampleNum);
@@ -132,10 +121,7 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
             }
             if (this.is_last) try {
                 if (ms.readyState === "open") {
-                    // this.ms.endOfStream();
-                    onVideoEnd?.(() => {
-                        ms.endOfStream();
-                    });
+                    onVideoEnd?.(() => ms.endOfStream());
                     if (onVideoEnd) onVideoEnd = null;
                 }
                 // 处理视频流结束，用户往回seek的情况
@@ -149,20 +135,10 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
             this.sampleNum = obj.sampleNum;
             this.is_last = obj.is_last;
             try {
+                // if (Logs) console.debug("onUpdateEnd:: Appending buffer");  // DO NOT log here -- too many logs (debug only)
                 this.appendBuffer(obj.buffer); 
                 if (nextLoadShouldPlay) {
-                    let attempts = 0;
-                    requestIdleCallback(function preparePlay() {
-                        if (video.isConnected == false) return; // Check if video is still in DOM
-                        if ((attempts++) >= 10) return; // Max retry limit
-                        video.play().then(() => {
-                            if (Logs) console.log("Video play started due to the nextLoadShouldPlay request");
-                        }).catch(e => {
-                            if (e && e.name && e.name !== 'NotAllowedError') {
-                                requestIdleCallback(preparePlay);
-                            }
-                        })
-                    });
+                    video.play();
                     nextLoadShouldPlay = false;
                 }
             }
@@ -198,6 +174,7 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
                     sb.ms.pendingInits = 0;
                 }
                 sb.addEventListener("updateend", onInitAppended);
+                if (Logs) console.debug("Application", "Appending source buffer")
                 sb.appendBuffer(initSegs[i].buffer);
                 sb.segmentIndex = 0;
                 sb.ms.pendingInits++;
@@ -235,8 +212,9 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
         }
         /* Chrome fires twice the seeking event with the same value */
         const seek_info = mp4boxfile.seek(video.currentTime, true);
-        loadSegment(seek_info.offset, seek_info.offset + bs)
+        const r = loadSegment(seek_info.offset, seek_info.offset + bs)
         video.lastSeekTime = video.currentTime;
+        return r
     }
     doSeek.antiTik = 0;
     function onSeeked() {
@@ -257,19 +235,17 @@ export async function PlayMp4Video(video, fileReader, bs = 1000000, onVideoEnd =
 
     // 检查视频结束
     function onWaiting() {
-        if (ms.original_duration - video.currentTime < 1) {
-            if (Logs) console.log("Video ended");
-            if (video.loop || lastHadPaused) {
-                const seek_info = mp4boxfile.seek(0, true);
-                loadSegment(seek_info.offset, seek_info.offset + bs).then(() => video.play());
-                video.currentTime = 0;
-                nextLoadShouldPlay = true;
-                lastHadPaused = false;
-            } else {
-                // 使得视频在结束的时候自动暂停
-                video.pause();
-                lastHadPaused = true;
-            }
+        if (ms.original_duration - video.currentTime > 1) return;
+        if (Logs) console.log("Video ended");
+        if (video.loop || lastHadPaused) {
+            video.currentTime = 0;
+            doSeek();
+            nextLoadShouldPlay = true;
+            lastHadPaused = false;
+        } else {
+            // 使得视频在结束的时候自动暂停
+            video.pause();
+            lastHadPaused = true;
         }
     }
     video.addEventListener('waiting', onWaiting);
