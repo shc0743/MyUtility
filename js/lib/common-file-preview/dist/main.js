@@ -14,6 +14,35 @@ configProvider = createDefaultConfigProvider();
 export const setConfigProvider = (provider) => { configProvider = provider; };
 ;
 export async function config(name, value) { return await configProvider.set(name, value); }
+const i18n_strtable = {
+    'en': {
+        'f2lp': 'Failed to load preview',
+        'phbdd2ac': 'Preview has been disabled due to a configuration.',
+        'c2dl': 'Click to download the file.',
+        'np': 'No preview available.',
+    },
+    'zh': {
+        'f2lp': '无法加载预览',
+        'phbdd2ac': '预览功能由于某个设置项而被停用。',
+        'c2dl': '点击下载文件。',
+        'np': '没有预览。',
+    },
+};
+// Determine user's preferred language once for performance
+const user_lang = (() => {
+    const langs = navigator.languages;
+    for (const lang of langs) {
+        const baseLang = lang.split('-')[0];
+        if (lang in i18n_strtable)
+            return lang;
+        if (baseLang in i18n_strtable)
+            return baseLang;
+    }
+    return 'en';
+})();
+function i18n(str) {
+    return i18n_strtable[user_lang]?.[str] ?? str;
+}
 export class HTMLCommonFilePreviewElement extends HTMLElement {
     static stylesheet = new CSSStyleSheet();
     #initbit = false;
@@ -109,7 +138,7 @@ export class HTMLCommonFilePreviewElement extends HTMLElement {
                         this.#el.replaceWith(p);
                         p.data = URL.createObjectURL(v);
                         p.type = fileType;
-                    }).catch(e => this.#el.innerText = `无法加载预览: ${e}`);
+                    }).catch(e => this.#el.innerText = `${i18n('f2lp')}: ${e}`);
                     break;
                 }
                 else
@@ -143,10 +172,10 @@ export class HTMLCommonFilePreviewElement extends HTMLElement {
                             const a = document.createElement('a');
                             a.href = ossUrl;
                             a.target = '_blank';
-                            a.innerText = '点击下载文件。';
+                            a.innerText = i18n('c2dl');
                             a.rel = 'noopener noreferrer';
                             a.download = 'true';
-                            this.#el.append(is_downgraded ? '预览功能由于某个设置项而被停用。' : '没有预览。', a);
+                            this.#el.append(is_downgraded ? i18n('phbdd2ac') : i18n('np'), a);
                         }
                     }
                 }
