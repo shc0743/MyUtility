@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "allowJs": true, // 允许混合编译 JS 文件
+        "checkJs": true, // 对 JS 文件进行类型检查
+        "declaration": true, // 生成 .d.ts 文件
+        "outDir": "./dist", // 输出目录
+        "rootDir": "./src", // 源代码目录
+        "target": "ES2022", // 根据项目调整
+        "strict": true, // 启用严格类型检查
+        "declarationMap": false,
+        "sourceMap": true,
+        "module": "ES2022",
+    },
+    "include": [
+        "src/**/*"
+    ]
+}

@@ -1,0 +1,225 @@
+let configProvider;
+const createDefaultConfigProvider = () => {
+    const storage = new Map();
+    return {
+        async get(name) {
+            return storage.get(name) || null;
+        },
+        async set(name, value) {
+            storage.set(name, value);
+        }
+    };
+};
+configProvider = createDefaultConfigProvider();
+export const setConfigProvider = (provider) => { configProvider = provider; };
+;
+export async function config(name, value) { return await configProvider.set(name, value); }
+export class HTMLCommonFilePreviewElement extends HTMLElement {
+    static stylesheet = new CSSStyleSheet();
+    #initbit = false;
+    #el;
+    constructor() {
+        super();
+        this.attachShadow({ mode: 'open' });
+        if (!this.shadowRoot)
+            throw new Error('Failed to attach shadow root!');
+        this.shadowRoot.adoptedStyleSheets = [HTMLCommonFilePreviewElement.stylesheet];
+        this.#el = document.createElement('div');
+        this.#el.id = 'app';
+        this.#el.innerText = 'Loading...';
+        this.shadowRoot.append(this.#el);
+    }
+    connectedCallback() {
+        // Component connected to the DOM
+    }
+    disconnectedCallback() {
+        // Component disconnected from the DOM
+    }
+    async init(get_url, fileType, fileName) {
+        if (this.#initbit)
+            throw new Error('HTMLCommonFilePreviewElement has been initialized!');
+        if (!this.#el)
+            throw new Error('HTMLCommonFilePreviewElement is not created properly!');
+        const type_array = fileType.split('/');
+        const majorType = type_array[0];
+        const minorType = type_array[1] || '';
+        const ossUrl = await get_url();
+        let is_downgraded = false;
+        switch (majorType) {
+            case 'audio':
+            case 'video': if (false === (await configProvider.get('DisallowMediaPreview') == 'true' ||
+                (majorType === 'audio' && await configProvider.get('DisallowAudioPreview') == 'true') ||
+                (majorType === 'video' && await configProvider.get('DisallowVideoPreview') == 'true'))) {
+                const apply_volume = (p) => {
+                    p.addEventListener('volumechange', async () => {
+                        // save the user's volume preference
+                        await configProvider.set('PreferredVolume', String(p.volume));
+                    });
+                    queueMicrotask(async () => {
+                        // set the volume to the user's preference
+                        const preferredVolume = await configProvider.get('PreferredVolume');
+                        if (preferredVolume)
+                            p.volume = +preferredVolume;
+                    });
+                };
+                const p = document.createElement(majorType);
+                p.id = 'app';
+                this.#el.replaceWith(p);
+                p.controls = true;
+                if (p instanceof HTMLVideoElement)
+                    p.playsInline = true;
+                apply_volume(p);
+                let source = document.createElement('source');
+                source.src = await get_url(3600 * 24); // 24小时的临时链接
+                source.type = fileType;
+                p.appendChild(source);
+                if (!p.isConnected)
+                    break;
+                p.load();
+                p.play().catch(() => { });
+                break;
+            }
+            else
+                is_downgraded = true;
+            case 'text': if (!(await configProvider.get('DisallowTextPreview') == 'true') && majorType === 'text') {
+                this.#el.classList.add('text');
+                fetch(ossUrl).then(v => v.text()).then(v => { this.#el.innerText = ''; this.#el.append(document.createTextNode(v)); }).catch(e => this.#el.innerText = `无法加载预览: ${e}`);
+                break;
+            }
+            else
+                is_downgraded = true;
+            case 'image': if (!(await configProvider.get('DisallowMediaPreview') == 'true' || await configProvider.get('DisallowImagePreview') == 'true') && majorType === 'image') {
+                let img = document.createElement('img');
+                img.id = 'app';
+                img.src = ossUrl;
+                img.alt = fileName;
+                img.addEventListener('click', () => {
+                    img.classList.toggle('scale');
+                });
+                this.#el.replaceWith(img);
+                break;
+            }
+            else
+                is_downgraded = true;
+            default: switch (fileType) {
+                case 'application/pdf': if (!(await configProvider.get('DisallowPdfPreview') == 'true')) {
+                    fetch(ossUrl).then(v => v.blob()).then(v => {
+                        let p = document.createElement('object');
+                        p.id = 'app';
+                        this.#el.replaceWith(p);
+                        p.data = URL.createObjectURL(v);
+                        p.type = fileType;
+                    }).catch(e => this.#el.innerText = `无法加载预览: ${e}`);
+                    break;
+                }
+                else
+                    is_downgraded = true;
+                default: {
+                    // 根据扩展名判断
+                    const ext = fileName.includes('.') ? (fileName.split('.').pop()?.toLowerCase()) : '';
+                    switch (ext) {
+                        case 'doc':
+                        case 'docx':
+                        case 'xls':
+                        case 'xlsx':
+                        case 'ppt':
+                        case 'pptx':
+                            if (!(await configProvider.get('DisallowOnlineOfficeFilePreview') == 'true' || await configProvider.get('DisallowOnlinePreview') == 'true')) {
+                                // 使用 https://view.officeapps.live.com/op/embed.aspx
+                                const url = new URL('https://view.officeapps.live.com/op/embed.aspx');
+                                url.searchParams.set('src', ossUrl);
+                                // 创建iframe以预览
+                                const iframe = document.createElement('iframe');
+                                iframe.setAttribute('style', 'width: 100%; height: 100%; border: 0; box-sizing: border-box;');
+                                iframe.src = url.href;
+                                this.#el.replaceWith(iframe);
+                                break;
+                            }
+                            else
+                                is_downgraded = true;
+                        default: {
+                            this.#el.innerText = '';
+                            this.#el.classList.add('text');
+                            const a = document.createElement('a');
+                            a.href = ossUrl;
+                            a.target = '_blank';
+                            a.innerText = '点击下载文件。';
+                            a.rel = 'noopener noreferrer';
+                            a.download = 'true';
+                            this.#el.append(is_downgraded ? '预览功能由于某个设置项而被停用。' : '没有预览。', a);
+                        }
+                    }
+                }
+            }
+        }
+        if ('image/audio/video'.split('/').includes(majorType) && !is_downgraded) {
+            this.classList.add('media');
+        }
+        if (is_downgraded) {
+            this.dataset.excludeBindmove = 'true';
+        }
+        this.#initbit = true;
+    }
+}
+// Define the CSS styles
+HTMLCommonFilePreviewElement.stylesheet.replace(`
+:host {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    border: 0;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+:host(.media) {
+    background-color: black;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+a {
+    color: blue;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+#app.text {
+    padding: 10px;
+    white-space: pre;
+    font-family: Consolas, monospace;
+}
+
+img#app {
+    cursor: zoom-in;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    width: fit-content;
+    height: fit-content;
+    margin: auto;
+}
+
+img#app.scale {
+    max-width: unset;
+    max-height: unset;
+    cursor: zoom-out;
+}
+
+video#app, object#app {
+    width: 100%;
+    height: 100%;
+}
+
+audio#app {
+    margin: auto;
+}
+`);
+// Register the custom element
+customElements.define('common-file-preview', HTMLCommonFilePreviewElement);
+//# sourceMappingURL=main.js.map

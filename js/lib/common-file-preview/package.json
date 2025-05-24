@@ -1,0 +1,32 @@
+{
+  "name": "common-file-preview",
+  "version": "5.6.0",
+  "description": "A common file preview Web Component",
+  "keywords": [
+    "front-end",
+    "web-component",
+    "file",
+    "preview"
+  ],
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "README.md",
+    "LICENSE",
+    "tsconfig.json",
+    "remove-old-artifacts.js"
+  ],
+  "license": "MIT",
+  "author": "chcs1013",
+  "type": "module",
+  "main": "./dist/main.js",
+  "types": "./dist/main.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node remove-old-artifacts.js && tsc"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.4",
+    "typescript": "^5.8.3"
+  }
+}
