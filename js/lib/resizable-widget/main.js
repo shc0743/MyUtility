@@ -164,6 +164,11 @@ export class HTMLResizableWidgetElement extends HTMLElement {
         this.open = false;
     }
 
+    activate() {
+        if (this.zIndexManagementProhibited) throw new TypeError('zIndexManagement is prohibited');
+        zIndexManager.activate(this);
+    }
+
     #isSizing = false;
     #sizingType = { a: 0, b: 0 };
     #sizingStart = null;
