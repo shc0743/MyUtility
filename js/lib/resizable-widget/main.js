@@ -160,9 +160,6 @@ export class HTMLResizableWidgetElement extends HTMLElement {
         return n;
     }
 
-    open() {
-        this.open = true;
-    }
     close() {
         this.open = false;
     }

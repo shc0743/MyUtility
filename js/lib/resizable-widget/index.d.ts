@@ -10,7 +10,6 @@ declare global {
         static readonly MIN_SIZE: number;
         static readonly SIZING_ATTRS: string[];
 
-        open(): void;
         close(): void;
     }
     interface HTMLElementTagNameMap {
