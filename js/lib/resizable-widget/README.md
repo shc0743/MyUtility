@@ -7,16 +7,13 @@
 ## Usage
 
 1. run `npm install resizable-widget`
-2. remember to **register the widget** before using it (if not registered, the widget will not work)
+2. remember to **import the library** before using it (it will be automatically registered as `<resizable-widget>`; if not registered, the widget will not work)
 
 ```javascript
-import { registerResizableWidget } from 'resizable-widget';
-registerResizableWidget();
-// or use a custom name
-registerResizableWidget('my-resizable-widget');
-// To register more than one instance, use the following:
-registerResizableWidget('my-resizable-widget', true); // force register
+import 'resizable-widget';
 ```
+
+**Notice**: The old-styled `registerResizableWidget` has been removed. Now we automatically register the widget as `<resizable-widget>`. If you want to use the old-styled `registerResizableWidget`, you will have to install `<=1.1.1` version.
 
 3. use the widget in your HTML
 
@@ -82,7 +79,6 @@ document.getElementById('x').onclick = () => {
 
 ## Known problems
 
-- Lack of `d.ts` file for TypeScript support. Will be added in the future.
 - Doesn't work well in some browsers
 
 ## License

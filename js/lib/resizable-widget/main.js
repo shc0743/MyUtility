@@ -160,6 +160,9 @@ export class HTMLResizableWidgetElement extends HTMLElement {
         return n;
     }
 
+    open() {
+        this.open = true;
+    }
     close() {
         this.open = false;
     }
@@ -265,11 +268,27 @@ export class HTMLResizableWidgetElement extends HTMLElement {
 };
 
 let registeredResizableWidget = false;
-export function registerResizableWidget(tagName = 'resizable-widget', force = false) {
+function myregisterResizableWidget(tagName = 'resizable-widget', force = false) {
     if (registeredResizableWidget && !force) return;
     registeredResizableWidget = true;
     addCSS(ResizableWidgetCSS1.replaceAll('$$TAG$', tagName));
     return customElements.define(tagName, HTMLResizableWidgetElement);
+}
+const definition = myregisterResizableWidget();
+
+function _deprecation_warning(lib, func, type, reference) {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process?.env?.NODE_ENV === 'production') return;
+    globalThis.console.warn('%c[npm::' + lib + '] %c[' + func + '] %cDEPRECATED!! %cDeprecated and will be removed in the next MAJOR version. See %c' + reference + '%c for more information.\n' +
+        '%cNote: %cThis %cdoes not%c indicate the package is deprecated. Instead, it indicates that your code uses the %cdeprecated%c ' + type + ' %c' + func + '%c. Fix your code to suppress this warning.',
+        'color: #007700', 'color: #570263', 'color: red; font-weight: bold;', '', 'font-weight: bold;', '', 'font-weight: bold; color: #0000ff', '',
+        'color: red; font-weight: bold;', '', 'font-style: italic', '', 'color: #570263', '');    
+}
+
+export const registerResizableWidget = function () {
+    _deprecation_warning('resizable-widget', 'registerResizableWidget', 'function', 'node_modules/resizable-widget/README.md');
+    if (arguments[0] === 'resizable-widget') return definition;
+    return myregisterResizableWidget.apply(this, arguments);
 }
 
 
