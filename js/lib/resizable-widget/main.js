@@ -274,6 +274,11 @@ function myregisterResizableWidget(tagName = 'resizable-widget', force = false) 
     if (registeredResizableWidget && !force) return;
     registeredResizableWidget = true;
     addCSS(ResizableWidgetCSS1.replaceAll('$$TAG$', tagName));
+    if (customElements.get(tagName)) {
+        globalThis.console.warn('%c[npm::resizable-widget] %cERR! %CDuplicated element registration.', 
+            'color: #007700', 'color: red; font-weight: bold;', 'font-weight: bold;');
+        return null;
+    }
     return customElements.define(tagName, HTMLResizableWidgetElement);
 }
 const definition = myregisterResizableWidget();
