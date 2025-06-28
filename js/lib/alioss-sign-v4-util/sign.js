@@ -83,7 +83,7 @@ export async function sign_url(user_url, {
     date: userDate = null,
 } = {}) {
     // if (!base_url && (user_url && user_url.origin)) base_url = user_url.origin;
-    /*ADDED*/if (typeof user_url === 'string') {
+    /*ADDED*/if (typeof user_url === 'string' && base_url) {
         user_url = (encodeURIComponent(user_url).replace(/\%2F/ig, '/'));
     }
     const url = new URL(user_url, base_url);
@@ -147,7 +147,7 @@ export async function sign_header(user_url, {
     // const url = new URL(typeof user_url === 'string' ?
     //     (encodeURIComponent(user_url).replace(/\%2F/ig, '/')) :
     //     (encodeURIComponent(decodeURIComponent(user_url.pathname)).replace(/\%2F/ig, '/')), base_url);
-    /*ADDED*/if (typeof user_url === 'string') {
+    /*ADDED*/if (typeof user_url === 'string' && base_url) {
     user_url = (encodeURIComponent(user_url).replace(/\%2F/ig, '/'));
     }
     const url = new URL(user_url, base_url);

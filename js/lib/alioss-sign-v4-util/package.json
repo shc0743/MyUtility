@@ -1,6 +1,6 @@
 {
   "name": "alioss-sign-v4-util",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Sign url or header for AliYun OSS (V4)",
   "main": "sign.js",
   "type": "module",
