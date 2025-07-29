@@ -2,6 +2,20 @@ import os
 import requests
 import json
 import webbrowser
+from urllib.parse import urlparse
+from pathlib import Path
+import re
+
+def sanitize_filename(filename):
+    # 定义非法字符的正则表达式（根据操作系统不同可能需要调整）
+    # 这里适用于Windows/Linux/Android
+    illegal_chars = r'[<>:"/\\|?*\x00-\x1F]'
+    # 替换非法字符为下划线或移除
+    sanitized = re.sub(illegal_chars, '_', filename)
+    # 移除开头和结尾的空格和点（某些系统不允许）
+    sanitized = sanitized.strip('. ')
+    # 限制文件名长度（避免路径过长问题）
+    return sanitized[:200]  # 限制最大长度
 
 def process_user_input(user_input):
     # 处理用户输入
@@ -71,13 +85,17 @@ def main():
         
         # 获取图片URL
         pic_url = data['data']['pic']
+        parsed_url = urlparse(pic_url)
+        path = parsed_url.path
+        file_ext = Path(path).suffix
         
         # 构建保存路径
         if id_type == 'aid':
-            filename = f"av{data['data']['aid']}.jpg"
+            filename = f"av{data['data']['aid']}"
         else:
-            filename = f"{data['data']['bvid']}.jpg"
-        
+            filename = f"{data['data']['bvid']}"
+        filename = f"{sanitize_filename(data['data']['title'])} ({filename}){file_ext}"
+
         save_path = os.path.join("/storage/emulated/0/Pictures/BiliVideoCovers/", filename)
         
         # 下载图片
