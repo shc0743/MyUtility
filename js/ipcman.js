@@ -1,3 +1,10 @@
+/*
+MIT License, Copyright (c) 2025 @chcs1013
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the “Software”), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 export const Trusted_Origins = new Set();
 const ipc_apis = new Map();
 const ipc_outbound_requests = new Map();
@@ -27,7 +34,7 @@ function IPC_Reply(ev, context, success, result, error = null, additional = {}) 
 
 async function IPC_Handler_Inbound(ev) {
     if (!Trusted_Origins.has(ev.origin)) return;
-    if (typeof ev.data !== 'object') return;
+    if ((!ev.data) || typeof ev.data !== 'object') return;
     if (ev.data.type !== 'ipc.invoke') return;
     const apiName = String(ev.data['context.invoke.api']);
     if (!ipc_apis.has(apiName)) return IPC_Reply(ev, {
@@ -63,7 +70,7 @@ async function IPC_Handler_Inbound(ev) {
 }
 async function IPC_Handler_Outbound(ev) {
     if (!Trusted_Origins.has(ev.origin)) return;
-    if (typeof ev.data !== 'object') return;
+    if ((!ev.data) || typeof ev.data !== 'object') return;
     if (ev.data.type !== 'ipc.reply') return;
     const id = String(ev.data.context?.id);
     if (!ipc_outbound_requests.has(id)) return;
@@ -90,10 +97,22 @@ globalThis.addEventListener('message', IPC_Handler_Outbound);
  * @param {*} args 要传递的参数。
  * @param {boolean} transparency 是否透传。透传，即 await 调用结果时，直接返回调用结果。
  * @param {number} timeout 超时时间。
+ * @param {string} target_origin 目标窗口的 origin。生产环境强烈建议明确指定
  * @returns {Promise<any>} 调用结果。
  */
-function IPC_Invoke(target, api, args, transparency = true, timeout = 2000) {
+function IPC_Invoke(target, api, args, transparency = true, timeout = 2000, target_origin = '*') {
     const id = crypto.randomUUID();
+    try {
+        target.postMessage({
+            type: 'ipc.invoke',
+            id: id,
+            'context.invoke.api': api,
+            args: args,
+        }, target_origin);
+    }
+    catch (e) {
+        return Promise.reject(e);
+    }
     const promise = new Promise((resolve, reject) => {
         ipc_outbound_requests.set(id, {
             resolve,
@@ -101,17 +120,6 @@ function IPC_Invoke(target, api, args, transparency = true, timeout = 2000) {
             transparency,
         });
     });
-    try {
-        target.postMessage({
-            type: 'ipc.invoke',
-            id: id,
-            'context.invoke.api': api,
-            args: args,
-        }, target.origin);
-    }
-    catch (e) {
-        return Promise.reject(e);
-    }
     const timeoutId = setTimeout(() => {
         ipc_outbound_requests.get(id).reject({
             type: 'ipc.internal',
