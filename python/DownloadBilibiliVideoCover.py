@@ -2,6 +2,7 @@ import os
 import requests
 import json
 import webbrowser
+import subprocess
 from urllib.parse import urlparse
 from pathlib import Path
 import re
@@ -50,6 +51,40 @@ def download_image(url, save_path):
                 f.write(chunk)
         return True
     return False
+    
+def notify_media_scanner(save_path) -> str or None:
+    """
+    通知系统媒体扫描器扫描指定文件
+
+    Args:
+        save_path: 文件保存路径
+
+    Returns:
+        None: 扫描通知发送成功
+        str: 失败描述信息
+    """
+    try:
+        # 使用 Android 的 'am' 命令发送广播
+        subprocess.run(
+            ['am', 'broadcast',
+             '-a', 'android.intent.action.MEDIA_SCANNER_SCAN_FILE',
+             '-d', f'file://{save_path}'],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        return None
+    except subprocess.CalledProcessError as e:
+        error_msg = f"发送广播失败: {e}"
+        if e.stderr:
+            error_msg += f", 错误输出: {e.stderr.strip()}"
+        return error_msg
+    except FileNotFoundError:
+        error_msg = "'am' 命令未找到。可能不在Android环境或没有相关权限。"
+        return error_msg
+    except Exception as e:
+        error_msg = f"未知错误: {e}"
+        return error_msg
 
 def main():
     user_input = input("请输入视频AV号或BV号: ").strip()
@@ -100,7 +135,13 @@ def main():
         
         # 下载图片
         if download_image(pic_url, save_path):
-            print("视频封面下载完成！")
+            print("视频封面下载完成！正在保存...", end="\r")
+            save_r = notify_media_scanner(save_path)
+            if save_r:
+                print('保存失败!    ')
+                print(save_r)
+            else:
+                print('已保存     ')
         else:
             print("封面下载失败！")
             
