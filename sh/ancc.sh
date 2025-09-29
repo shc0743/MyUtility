@@ -1,38 +1,65 @@
 #!/usr/bin/env bash
 ancc() {
-    if [ $# -ne 1 ]; then
-        echo "Usage: ancc file.java"
+    if [ $# -eq 0 ]; then
+        echo "Usage: ancc file1.java [file2.java ...]"
         return 1
     fi
     
-    local java_file="$1"
-    local class_name=$(basename "$java_file" .java)
+    local java_files=("$@")
+    local main_class_name=$(basename "${java_files[0]}" .java)
+    local temp_dir=$(mktemp -d)
     
-    if [ ! -f "$java_file" ]; then
-        echo "Build FAILED: No input file"
+    # 在临时目录中编译
+    if ! javac -source 1.8 -target 1.8 -d "$temp_dir" "${java_files[@]}"; then
+        echo "Build FAILED: Java compilation error"
+        rm -rf "$temp_dir"
         return 1
     fi
     
-    if ! javac -source 1.8 -target 1.8 "$java_file"; then
-        echo "Build FAILED: Java error"
+    # 获取临时目录中的所有.class文件（包括子目录）
+    local class_files=()
+    while IFS= read -r -d '' file; do
+        class_files+=("$file")
+    done < <(find "$temp_dir" -name "*.class" -type f -print0)
+    
+    if [ ${#class_files[@]} -eq 0 ]; then
+        echo "Build FAILED: No .class files generated in $temp_dir"
+        echo "Directory contents:"
+        find "$temp_dir" -type f
+        rm -rf "$temp_dir"
         return 1
     fi
     
-    if ! d8 --release --lib "$android_jar" --output . "${class_name}.class"; then
-        echo "Build FAILED"
+    echo "Packaging ${#class_files[@]} class files"
+    
+    # 打包所有.class文件
+    if ! d8 --release --lib "$android_jar" --output . "${class_files[@]}"; then
+        echo "Build FAILED: D8 error"
+        rm -rf "$temp_dir"
         return 1
     fi
     
     if [ -f "classes.dex" ]; then
         chmod 444 "classes.dex"
-        echo "Built"
-        mv -f classes.dex $class_name.dex
+        echo "Built ${main_class_name}.dex from ${#java_files[@]} Java file(s)"
+        mv -f classes.dex "${main_class_name}.dex"
     else
         echo "Build FAILED: classes.dex not found"
+        rm -rf "$temp_dir"
         return 1
     fi
     
-    rm -f "${class_name}.class"
+    # 清理临时目录
+    rm -rf "$temp_dir"
+    
+    # 多文件提示
+    if [ ${#java_files[@]} -gt 1 ]; then
+        echo "Available classes in dex:"
+        for java_file in "${java_files[@]}"; do
+            local cls_name=$(basename "$java_file" .java)
+            echo "  $cls_name"
+        done
+    fi
 }
 anrun() {
     /system/bin/app_process -Djava.class.path="$1" "$(pwd)" "$2"
