@@ -161,8 +161,8 @@ export function TrackPopupMenu(hMenu: HTMLElement, x: MenuPosition, y: MenuPosit
 
             if (!currentFocus) return false;
 
-            let elem = currentFocus as HTMLElement;
-            while (elem[(/Up/i.test(ev.key) ? 'previous' : 'next') + 'ElementSibling' as keyof HTMLElement] as HTMLElement | null) {
+            let elem = currentFocus as HTMLElement | null;
+            while (elem = (elem && elem[(/Up/i.test(ev.key) ? 'previous' : 'next') + 'ElementSibling' as keyof HTMLElement] as HTMLElement | null)) {
                 if (elem.getAttribute('disabled') != null) continue;
                 currentFocus = elem;
                 elem.focus();

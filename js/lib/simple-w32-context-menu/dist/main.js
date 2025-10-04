@@ -142,7 +142,7 @@ export function TrackPopupMenu(hMenu, x, y, flags = 0) {
             if (!currentFocus)
                 return false;
             let elem = currentFocus;
-            while (elem[(/Up/i.test(ev.key) ? 'previous' : 'next') + 'ElementSibling']) {
+            while (elem = (elem && elem[(/Up/i.test(ev.key) ? 'previous' : 'next') + 'ElementSibling'])) {
                 if (elem.getAttribute('disabled') != null)
                     continue;
                 currentFocus = elem;
