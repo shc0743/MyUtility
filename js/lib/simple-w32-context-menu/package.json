@@ -1,0 +1,25 @@
+{
+  "name": "simple-w32-context-menu",
+  "version": "1.0.0",
+  "description": "A library to emulate Windows legacy context menu experience",
+  "keywords": [
+    "contextmenu",
+    "context-menu"
+  ],
+  "files": [
+    "dist/**/*",
+    "src/**/*",
+    "tsconfig.json"
+  ],
+  "license": "Unlicense",
+  "author": "chcs1013",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
