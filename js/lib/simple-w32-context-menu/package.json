@@ -1,6 +1,6 @@
 {
   "name": "simple-w32-context-menu",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A library to emulate Windows legacy context menu experience",
   "keywords": [
     "contextmenu",
@@ -11,6 +11,7 @@
     "src/**/*",
     "tsconfig.json"
   ],
+  "types": "dist/main.d.ts",
   "license": "Unlicense",
   "author": "chcs1013",
   "type": "module",
