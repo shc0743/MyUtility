@@ -81,6 +81,7 @@ export async function sign_url(user_url, {
     bucket = null, region = null,
     method = "GET",
     date: userDate = null,
+    sts_token = null,
 } = {}) {
     // if (!base_url && (user_url && user_url.origin)) base_url = user_url.origin;
     /*ADDED*/if (typeof user_url === 'string' && base_url) {
@@ -91,7 +92,8 @@ export async function sign_url(user_url, {
     // 初始化
     if (!userDate) userDate = new Date();
     const date = ISO8601(userDate);
-    url.searchParams.set('x-oss-signature-version', 'OSS4-HMAC-SHA256')
+    url.searchParams.set('x-oss-signature-version', 'OSS4-HMAC-SHA256');
+    if (sts_token) url.searchParams.set('x-oss-security-token', sts_token);
     // 参数检查
     if ((expires < 1 || expires > 604800)) throw new TypeError('Expires must between 1 and 604800');
     if (!region) throw new TypeError('In V4 signature, `region` is required.'); // what a fucking!

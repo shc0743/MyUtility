@@ -50,6 +50,7 @@ declare module 'alioss-sign-v4-util' {
             region: string;
             method?: string;
             date?: Date;
+            sts_token?: string;
         }
     ): Promise<string>;
 
