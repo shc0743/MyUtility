@@ -3,7 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>vue-dialog-box Demo</title>
+    <title>vue-dialog-view Demo</title>
+    
+    <!-- 添加 importmap 解决依赖解析 -->
+    <script type="importmap">
+    {
+      "imports": {
+        "vue": "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js",
+        "vue-dialog-view": "https://cdn.jsdelivr.net/npm/vue-dialog-view@1.0.0/dist/dialog-view.es.js"
+      }
+    }
+    </script>
+    
     <style>
       body {
         font-family: system-ui, sans-serif;
@@ -30,33 +41,33 @@
     </style>
   </head>
   <body>
-    <div id="app">
-      <button @click="show = true">打开对话框</button>
-
-      <!-- 使用小写组件名，避免 HTML 不区分大小写的问题 -->
-      <dialog-box v-model="show" :show-title-bar="true" :show-close-button="true">
-        <template #title>
-          Hello from vue-dialog-box!
-        </template>
-
-        <p>这是通过 jsDelivr 引入的对话框组件。</p>
-        <p>你可以点击右上角关闭按钮或外部区域来关闭。</p>
-      </dialog-box>
-    </div>
+    <div id="app"></div>
 
     <script type="module">
-      import { createApp, ref } from 'https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js'
-      import DialogBox from 'https://cdn.jsdelivr.net/npm/vue-dialog-view@1.0.0/dist/dialog-view.es.js'
+      import { createApp, ref } from 'vue'
+      import DialogView from 'vue-dialog-view'
 
       const App = {
         setup() {
           const show = ref(false)
           return { show }
-        }
+        },
+        template: `
+              <button @click="show = true">打开对话框</button>
+
+      <dialog-view v-model="show" :show-title-bar="true" :show-close-button="true">
+        <template #title>
+          Hello from vue-dialog-view!
+        </template>
+
+        <p>这是通过 jsDelivr 引入的对话框组件。</p>
+        <p>你可以点击右上角关闭按钮或按 Esc 来关闭。</p>
+      </dialog-view>
+        `
       }
 
       const app = createApp(App)
-      app.use(DialogBox) // ✅ 手动注册组件库
+      app.use(DialogView) // ✅ 手动注册组件库
       app.mount('#app')
     </script>
   </body>
