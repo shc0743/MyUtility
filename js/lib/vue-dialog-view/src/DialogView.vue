@@ -88,15 +88,13 @@ defineExpose({
   border-radius: 5px;
   border: 1px solid gray;
   outline: 0 !important;
+  max-width: calc(100% - 2em);
+  max-height: calc(100% - 2em);
 }
 
 .dialog-view[open] {
   display: flex;
   flex-direction: column;
-  position: fixed;
-  margin: auto;
-  max-width: 90vw;
-  max-height: 90vh;
 }
 
 .dialog-view::backdrop {
@@ -109,6 +107,7 @@ defineExpose({
   align-items: center;
   margin-bottom: 0.5em;
   min-height: 24px;
+  white-space: pre;
 }
 
 .dialog-title {
