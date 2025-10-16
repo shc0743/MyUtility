@@ -27,5 +27,10 @@ export default defineConfig({
       }
     },
     cssCodeSplit: false,
-  }
+  },
+  css: {
+    modules: {
+      generateScopedName: '[hash:sha256]',
+    },
+  },
 })
