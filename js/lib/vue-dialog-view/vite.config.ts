@@ -21,12 +21,13 @@ export default defineConfig({
     rollupOptions: {
       external: ['vue'],
       output: {
+        exports: 'named',
         globals: {
           vue: 'Vue'
-        }
-      }
+        },
+      },
     },
-    cssCodeSplit: false,
+    sourcemap: true,
   },
   css: {
     modules: {

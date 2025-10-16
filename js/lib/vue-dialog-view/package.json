@@ -1,6 +1,6 @@
 {
     "name": "vue-dialog-view",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "description": "A modern Vue 3 dialog component using native dialog element",
     "type": "module",
     "main": "./dist/dialog-view.umd.js",

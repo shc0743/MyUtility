@@ -1,8 +1,12 @@
-import { App } from 'vue'
-import DialogView from './DialogView.obf.vue'
+import { App, Plugin } from 'vue'
+import DialogViewComponent from './DialogView.obf.vue'
 
-DialogView.install = (app: App) => {
-  app.component('DialogView', DialogView)
+export { default as DialogView } from './DialogView.obf.vue'
+
+export const DialogViewPlugin: Plugin = {
+  install: (app: App) => {
+    app.component('DialogView', DialogViewComponent)
+  }
 }
 
-export default DialogView
+export default DialogViewPlugin
