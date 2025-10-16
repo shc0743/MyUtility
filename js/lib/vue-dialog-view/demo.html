@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>vue-dialog-box Demo</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        background: #f6f8fa;
+      }
+      button {
+        padding: 0.6em 1.2em;
+        border: none;
+        border-radius: 8px;
+        background-color: #42b983;
+        color: white;
+        font-size: 1em;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #2f9d6a;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <button @click="show = true">打开对话框</button>
+
+      <!-- 使用小写组件名，避免 HTML 不区分大小写的问题 -->
+      <dialog-box v-model="show" :show-title-bar="true" :show-close-button="true">
+        <template #title>
+          Hello from vue-dialog-box!
+        </template>
+
+        <p>这是通过 jsDelivr 引入的对话框组件。</p>
+        <p>你可以点击右上角关闭按钮或外部区域来关闭。</p>
+      </dialog-box>
+    </div>
+
+    <script type="module">
+      import { createApp, ref } from 'https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js'
+      import DialogBox from 'https://cdn.jsdelivr.net/npm/vue-dialog-view@1.0.0/dist/dialog-view.es.js'
+
+      const App = {
+        setup() {
+          const show = ref(false)
+          return { show }
+        }
+      }
+
+      const app = createApp(App)
+      app.use(DialogBox) // ✅ 手动注册组件库
+      app.mount('#app')
+    </script>
+  </body>
+</html>

@@ -1,0 +1,54 @@
+{
+    "name": "vue-dialog-view",
+    "version": "1.0.0",
+    "description": "A modern Vue 3 dialog component using native dialog element",
+    "type": "module",
+    "main": "./dist/dialog-view.umd.js",
+    "module": "./dist/dialog-view.es.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/dialog-view.es.js",
+            "require": "./dist/dialog-view.umd.js"
+        }
+    },
+    "files": [
+        "src/**",
+        "dist/**",
+        "README.md",
+        "tsconfig.json",
+        "vite.config.ts",
+        "LICENSE"
+    ],
+    "scripts": {
+        "dev": "vite",
+        "build": "vue-tsc --noEmit && vite build",
+        "preview": "vite preview"
+    },
+    "peerDependencies": {
+        "vue": "^3.3.0"
+    },
+    "devDependencies": {
+        "@vitejs/plugin-vue": "^6.0.1",
+        "typescript": "^5.9.3",
+        "vite": "^7.1.10",
+        "vite-plugin-css-injected-by-js": "^3.5.2",
+        "vite-plugin-dts": "^4.5.4",
+        "vue": "^3.5.22",
+        "vue-tsc": "^3.1.1"
+    },
+    "keywords": [
+        "front-end",
+        "vue",
+        "dialog",
+        "dialog-view",
+        "html5"
+    ],
+    "author": "chcs1013",
+    "license": "Unlicense",
+    "bugs": {
+        "url": "https://github.com/shc0743/MyUtility/issues"
+    },
+    "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/vue-dialog-view#readme"
+}
