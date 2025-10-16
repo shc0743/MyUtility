@@ -82,7 +82,7 @@ defineExpose({
 })
 </script>
 
-<style scoped>
+<style>
 .dialog-view {
   padding: 20px;
   border-radius: 5px;
@@ -90,6 +90,8 @@ defineExpose({
   outline: 0 !important;
   max-width: calc(100% - 2em);
   max-height: calc(100% - 2em);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .dialog-view[open] {
@@ -108,13 +110,16 @@ defineExpose({
   margin-bottom: 0.5em;
   min-height: 24px;
   white-space: pre;
+  overflow: hidden;
 }
 
 .dialog-title {
   flex: 1;
   text-align: center;
   font-weight: bold;
-  font-size: 1.1em;
+  font-size: large;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dialog-close-button {

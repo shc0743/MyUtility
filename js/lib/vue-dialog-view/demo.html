@@ -10,7 +10,7 @@
     {
       "imports": {
         "vue": "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js",
-        "vue-dialog-view": "https://cdn.jsdelivr.net/npm/vue-dialog-view@1.1.0/dist/dialog-view.es.js"
+        "vue-dialog-view": "https://cdn.jsdelivr.net/npm/vue-dialog-view@1.2.0/dist/dialog-view.es.js"
       }
     }
     </script>
@@ -44,31 +44,71 @@
     <div id="app"></div>
 
     <script type="module">
-      import { createApp, ref } from 'vue'
-      import DialogView from 'vue-dialog-view'
+import { createApp, ref, h } from 'vue'
+import DialogView from 'vue-dialog-view'
 
-      const App = {
-        setup() {
-          const show = ref(false)
-          return { show }
+const text = `
+When good old friends are going away
+Will you wish them to remember your name?
+When good old days are passing away
+Will you promise your heart remains the same
+Never can we suspend the time
+Having to leave the tracks behind
+there is a longer way ahead, After all.
+There used to be a story teller
+who always painted the sunshine and the rain
+One has to eventually grow up
+Spending a lifetime to taste the love and pain
+Never can we suspend the time
+Having to leave the tracks behind
+there is a longer way ahead, After all.
+If it’s too hard to say goodbye
+Give us a try to sing a rhyme
+“May you, the beauty of this world, always shine.”
+
+---
+
+The text/content/images referenced herein are from miHoYo and are used for reference purposes only. All rights belong to the original copyright holder.
+`
+
+const App = {
+  setup() {
+    const show = ref(false)
+    
+    return () => [
+      h(
+        'button',
+        {
+          onClick: () => { show.value = true }
         },
-        template: `
-              <button @click="show = true">打开对话框</button>
+        '打开对话框'
+      ),
+      
+      h(
+        DialogView,
+        {
+          modelValue: show.value,
+          'onUpdate:modelValue': (value) => { show.value = value },
+          showTitleBar: true,
+          showCloseButton: true
+        },
+        {
+          title: () => h('div', 'Hello from vue-dialog-view!'),
+          default: () => [
+            h('p', '这是通过 jsDelivr 引入的对话框组件。'),
+            h('p', '你可以点击右上角关闭按钮或按 Esc 来关闭。'),
+            h('br'),
+            h('pre', text),
+          ]
+        }
+      )
+    ]
+  }
+}
 
-      <dialog-view v-model="show" :show-title-bar="true" :show-close-button="true">
-        <template #title>
-          Hello from vue-dialog-view!
-        </template>
-
-        <p>这是通过 jsDelivr 引入的对话框组件。</p>
-        <p>你可以点击右上角关闭按钮或按 Esc 来关闭。</p>
-      </dialog-view>
-        `
-      }
-
-      const app = createApp(App)
-      app.use(DialogView) // ✅ 手动注册组件库
-      app.mount('#app')
+const app = createApp(App)
+app.use(DialogView)
+app.mount('#app')
     </script>
   </body>
 </html>

@@ -5,7 +5,7 @@
     v-bind="$attrs"
     @close="handleDialogClose"
   >
-    <div v-if="showTitleBar" class="_f365dae0582379d563ee03ab860c73c916d68f096a41a8bd34e05e566987b1f6-bar">
+    <div v-if="showTitleBar" class="_f1bcbda2e971453cc116bd5c6d4a303f38ac3e0618c26210b206271398b2f619">
       <span class="_f365dae0582379d563ee03ab860c73c916d68f096a41a8bd34e05e566987b1f6">
         <slot name="title"></slot>
       </span>
@@ -90,6 +90,8 @@ defineExpose({
   outline: 0 !important;
   max-width: calc(100% - 2em);
   max-height: calc(100% - 2em);
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 ._0e414b08e017324be9d8055e33e9e57a5d618fd64445845aa3d1c9c71a1cf19f[open] {
@@ -101,20 +103,23 @@ defineExpose({
   background: rgba(0, 0, 0, 0.5);
 }
 
-._f365dae0582379d563ee03ab860c73c916d68f096a41a8bd34e05e566987b1f6-bar {
+._f1bcbda2e971453cc116bd5c6d4a303f38ac3e0618c26210b206271398b2f619 {
   display: flex;
   flex-direction: row;
   align-items: center;
   margin-bottom: 0.5em;
   min-height: 24px;
   white-space: pre;
+  overflow: hidden;
 }
 
 ._f365dae0582379d563ee03ab860c73c916d68f096a41a8bd34e05e566987b1f6 {
   flex: 1;
   text-align: center;
   font-weight: bold;
-  font-size: 1.1em;
+  font-size: large;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 ._2b0f1321796c8091f668958929ed738b53afcb63d79387dc52ddc75b55ffb46c {
