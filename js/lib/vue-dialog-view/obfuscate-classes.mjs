@@ -3,8 +3,11 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 
+
 const SRC_DIR = path.resolve('./src');
 const OBF_SUFFIX = '.obf.vue';
+const PROJECT_NAME = 'https://registry.npmjs.org/vue-dialog-view/';
+const PROJECT_SCOPE = 'npm';
 
 // ----------------------------
 // 遍历 Vue 文件（跳过 .obf.vue）
@@ -22,11 +25,64 @@ function getVueFiles(dir) {
   return files;
 }
 
+class CRC64 {
+  static ECMA182_POLY = 0xC96C5795D7870F42n;
+  static ISO3309_POLY = 0xD800000000000000n;
+
+  static table = null;
+
+  static initTable(poly = CRC64.ECMA182_POLY) {
+    if (CRC64.table) return;
+
+    CRC64.table = new Array(256);
+    for (let i = 0; i < 256; i++) {
+      let crc = BigInt(i);
+      for (let j = 0; j < 8; j++) {
+        if (crc & 1n) {
+          crc = (crc >> 1n) ^ poly;
+        } else {
+          crc = crc >> 1n;
+        }
+      }
+      CRC64.table[i] = crc;
+    }
+  }
+
+  static calculate(data, initial = 0n, poly = CRC64.ECMA182_POLY) {
+    CRC64.initTable(poly);
+
+    let crc = initial;
+
+    if (typeof data === 'string') {
+      data = Buffer.from(data);
+    }
+
+    for (let i = 0; i < data.length; i++) {
+      const index = Number((crc ^ BigInt(data[i])) & 0xFFn);
+      crc = (crc >> 8n) ^ CRC64.table[index];
+    }
+
+    return crc;
+  }
+
+  static calculateECMA182(data) {
+    return CRC64.calculate(data, 0n, CRC64.ECMA182_POLY);
+  }
+
+  static calculateISO3309(data) {
+    return CRC64.calculate(data, 0n, CRC64.ISO3309_POLY);
+  }
+}
+
 // ----------------------------
 // SHA256 混淆类名
 // ----------------------------
 function obfClass(name) {
-  return '_' + crypto.createHash('sha256').update(name).digest('hex')
+  const sha256 = crypto.createHash('sha256')
+    .update(PROJECT_SCOPE + '@' + PROJECT_NAME + '::' + name)
+    .digest();
+
+  return '_' + CRC64.calculateECMA182(sha256).toString(16).padStart(16, '0')
 }
 
 // ----------------------------
@@ -67,6 +123,8 @@ function replaceClasses(content, classMap) {
 // 主程序
 // ----------------------------
 function main() {
+  const startTime = Date.now()
+
   const vueFiles = getVueFiles(SRC_DIR);
   const allClasses = new Set();
 
@@ -84,7 +142,7 @@ function main() {
   const classMap = {};
   classList.forEach(cls => { classMap[cls] = obfClass(cls); });
 
-  console.log('🔹 类名混淆映射：');
+  console.log('🔹 Obfuscation Map: ');
   console.table(classMap);
 
   // 替换并生成 .obf.vue 文件
@@ -97,7 +155,7 @@ function main() {
     console.log(`✅ ${file} -> ${obfFile}`);
   });
 
-  console.log('🎉 所有文件混淆完成！');
+  console.log('🎉 Obfuscate SUCCESSFUL in ' + ((Date.now() - startTime)) + 'ms');
 }
 
 main();

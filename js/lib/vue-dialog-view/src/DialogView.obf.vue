@@ -1,12 +1,12 @@
 <template>
   <dialog
     ref="dialogRef"
-    class="_0e414b08e017324be9d8055e33e9e57a5d618fd64445845aa3d1c9c71a1cf19f"
+    class="_b4102a3b79656a37"
     v-bind="$attrs"
     @close="handleDialogClose"
   >
-    <div v-if="showTitleBar" class="_f1bcbda2e971453cc116bd5c6d4a303f38ac3e0618c26210b206271398b2f619">
-      <span class="_f365dae0582379d563ee03ab860c73c916d68f096a41a8bd34e05e566987b1f6">
+    <div v-if="showTitleBar" class="_4d394b1507fdc584">
+      <span class="_088d860d2fd75292">
         <slot name="title"></slot>
       </span>
       <a
@@ -14,11 +14,11 @@
         href="javascript:void(0)"
         role="button"
         aria-label="Close the dialog"
-        class="_2b0f1321796c8091f668958929ed738b53afcb63d79387dc52ddc75b55ffb46c"
+        class="_468ff1da37ead40a"
         @click.prevent="closeDialog"
       >×</a>
     </div>
-    <div class="_3b2bdd19ddec80c5f0f162bc4b423dafa4f687f6f831e58742be40fb0e80838e">
+    <div class="_da3b3b2a4aeed1ee">
       <slot></slot>
     </div>
   </dialog>
@@ -83,7 +83,7 @@ defineExpose({
 </script>
 
 <style>
-._0e414b08e017324be9d8055e33e9e57a5d618fd64445845aa3d1c9c71a1cf19f {
+._b4102a3b79656a37 {
   padding: 20px;
   border-radius: 5px;
   border: 1px solid gray;
@@ -94,16 +94,16 @@ defineExpose({
   overflow: hidden;
 }
 
-._0e414b08e017324be9d8055e33e9e57a5d618fd64445845aa3d1c9c71a1cf19f[open] {
+._b4102a3b79656a37[open] {
   display: flex;
   flex-direction: column;
 }
 
-._0e414b08e017324be9d8055e33e9e57a5d618fd64445845aa3d1c9c71a1cf19f::backdrop {
+._b4102a3b79656a37::backdrop {
   background: rgba(0, 0, 0, 0.5);
 }
 
-._f1bcbda2e971453cc116bd5c6d4a303f38ac3e0618c26210b206271398b2f619 {
+._4d394b1507fdc584 {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -113,7 +113,7 @@ defineExpose({
   overflow: hidden;
 }
 
-._f365dae0582379d563ee03ab860c73c916d68f096a41a8bd34e05e566987b1f6 {
+._088d860d2fd75292 {
   flex: 1;
   text-align: center;
   font-weight: bold;
@@ -122,7 +122,7 @@ defineExpose({
   text-overflow: ellipsis;
 }
 
-._2b0f1321796c8091f668958929ed738b53afcb63d79387dc52ddc75b55ffb46c {
+._468ff1da37ead40a {
   margin-left: 0.5em;
   text-decoration: none;
   color: #666;
@@ -138,13 +138,13 @@ defineExpose({
   background: none;
 }
 
-._2b0f1321796c8091f668958929ed738b53afcb63d79387dc52ddc75b55ffb46c:hover {
+._468ff1da37ead40a:hover {
   color: #333;
   background-color: #f0f0f0;
   border-radius: 3px;
 }
 
-._3b2bdd19ddec80c5f0f162bc4b423dafa4f687f6f831e58742be40fb0e80838e {
+._da3b3b2a4aeed1ee {
   flex: 1;
   overflow: auto;
   display: flex;
