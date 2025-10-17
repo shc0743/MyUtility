@@ -35,11 +35,13 @@ interface Props {
   modelValue: boolean
   showTitleBar?: boolean
   showCloseButton?: boolean
+  closable?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showTitleBar: true,
   showCloseButton: true,
+  closable: true,
 })
 
 const emit = defineEmits<{
@@ -49,18 +51,26 @@ const emit = defineEmits<{
 const dialogRef = ref<HTMLDialogElement | null>(null)
 
 const openDialog = (): void => {
-  if (dialogRef.value && !dialogRef.value.open) {
-    dialogRef.value.showModal()
-  }
+  emit('update:modelValue', true)
 }
 
 const closeDialog = (): void => {
-  if (dialogRef.value && dialogRef.value.open) {
-    dialogRef.value.close()
-  }
+  emit('update:modelValue', false)
 }
 
 const handleDialogClose = (): void => {
+  if (!props.closable) {
+    if (props.modelValue) {
+      // not programmatically close
+      // re-open the dialog
+      nextTick(() => {
+        if (dialogRef.value && !dialogRef.value.open) {
+          dialogRef.value.showModal()
+        }
+      }) // Avoid using 'cancel' event because some browsers handle it incorrectly
+      return;
+    }
+  }
   if (props.modelValue) {
     emit('update:modelValue', false)
   }
@@ -157,7 +167,5 @@ defineExpose({
 
 .dialog-footer {
   margin-top: 0.5em;
-  display: flex;
-  align-items: center;
 }
 </style>

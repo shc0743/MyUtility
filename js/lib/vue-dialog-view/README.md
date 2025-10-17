@@ -65,6 +65,7 @@ const showDialog = ref(false)
 | `modelValue` | `boolean` | **required** | Controls the visibility of the dialog |
 | `showTitleBar` | `boolean` | `true` | Whether to show the title bar |
 | `showCloseButton` | `boolean` | `true` | Whether to show the close button in title bar |
+| `closable` | `boolean` | `true` | Control if the dialog can be closed **by the user** (programmatically close will always work) |
 
 ## Events
 
@@ -76,7 +77,8 @@ const showDialog = ref(false)
 
 | Slot | Description |
 |------|-------------|
-| `#title` | Content for the dialog title |
+| `#title` | Content for the dialog title (optional) |
+| `#footer` | Footer of the dialog (optional) |
 | `default` | Main content of the dialog |
 
 ## Methods

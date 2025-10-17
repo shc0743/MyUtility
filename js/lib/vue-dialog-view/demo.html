@@ -10,7 +10,7 @@
     {
       "imports": {
         "vue": "https://cdn.jsdelivr.net/npm/vue@3/dist/vue.esm-browser.prod.js",
-        "vue-dialog-view": "https://cdn.jsdelivr.net/npm/vue-dialog-view@1.2.0/dist/dialog-view.es.js"
+        "vue-dialog-view": "https://cdn.jsdelivr.net/npm/vue-dialog-view@1.4.0/dist/dialog-view.es.js"
       }
     }
     </script>
@@ -45,7 +45,8 @@
 
     <script type="module">
 import { createApp, ref, h } from 'vue'
-import DialogView from 'vue-dialog-view'
+import { DialogView } from 'vue-dialog-view'
+//import DialogView from 'vue-dialog-view' if you want to register the component globally
 
 const text = `
 When good old friends are going away
@@ -74,40 +75,130 @@ The text/content/images referenced herein are from miHoYo and are used for refer
 const App = {
   setup() {
     const show = ref(false)
+    const showTitleBar = ref(true)
+    const showCloseButton = ref(true)
+    const closable = ref(true)
+    
+    const closeDialog = () => {
+      show.value = false
+    }
     
     return () => [
-      h(
-        'button',
-        {
-          onClick: () => { show.value = true }
-        },
-        '打开对话框'
-      ),
-      
-      h(
-        DialogView,
-        {
-          modelValue: show.value,
-          'onUpdate:modelValue': (value) => { show.value = value },
-          showTitleBar: true,
-          showCloseButton: true
-        },
-        {
-          title: () => h('div', 'Hello from vue-dialog-view!'),
-          default: () => [
-            h('p', '这是通过 jsDelivr 引入的对话框组件。'),
-            h('p', '你可以点击右上角关闭按钮或按 Esc 来关闭。'),
-            h('br'),
-            h('pre', text),
-          ]
-        }
-      )
+      h('div', { style: 'padding: 20px;' }, [
+        // 控制面板
+        h('div', { style: 'margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;' }, [
+          h('h2', { style: 'margin-top: 0;' }, '对话框控制面板'),
+          
+          h('div', { style: 'display: flex; gap: 20px; flex-wrap: wrap;' }, [
+            // 控制选项
+            h('div', { style: 'display: flex; flex-direction: column; gap: 10px;' }, [
+              h('label', { style: 'display: flex; align-items: center; gap: 8px;' }, [
+                h('input', {
+                  type: 'checkbox',
+                  checked: showTitleBar.value,
+                  onChange: (e) => { showTitleBar.value = e.target.checked }
+                }),
+                '显示标题栏 (showTitleBar)'
+              ]),
+              
+              h('label', { style: 'display: flex; align-items: center; gap: 8px;' }, [
+                h('input', {
+                  type: 'checkbox',
+                  checked: showCloseButton.value,
+                  onChange: (e) => { showCloseButton.value = e.target.checked }
+                }),
+                '显示关闭按钮 (showCloseButton)'
+              ]),
+              
+              h('label', { style: 'display: flex; align-items: center; gap: 8px;' }, [
+                h('input', {
+                  type: 'checkbox',
+                  checked: closable.value,
+                  onChange: (e) => { closable.value = e.target.checked }
+                }),
+                '允许用户关闭 (closable)'
+              ])
+            ]),
+            
+            // 操作按钮
+            h('div', { style: 'display: flex; flex-direction: column; gap: 10px;' }, [
+              h('button', {
+                onClick: () => { show.value = true },
+                style: 'padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;'
+              }, '打开对话框'),
+              
+              h('button', {
+                onClick: closeDialog,
+                style: 'padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;'
+              }, '关闭对话框')
+            ])
+          ]),
+          
+          // 当前状态显示
+          h('div', { style: 'margin-top: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-family: monospace;' }, [
+            h('div', `对话框状态: ${show.value ? '打开' : '关闭'}`),
+            h('div', `showTitleBar: ${showTitleBar.value}`),
+            h('div', `showCloseButton: ${showCloseButton.value}`),
+            h('div', `closable: ${closable.value}`)
+          ])
+        ]),
+        
+        // 对话框组件
+        h(
+          DialogView,
+          {
+            modelValue: show.value,
+            'onUpdate:modelValue': (value) => { 
+              if (closable.value) {
+                show.value = value 
+              }
+            },
+            showTitleBar: showTitleBar.value,
+            showCloseButton: showCloseButton.value,
+            closable: closable.value
+          },
+          {
+            title: () => h('div', [
+              h('span', { style: 'color: #007bff;' }, '🚀 '),
+              'Hello from vue-dialog-view!'
+            ]),
+            default: () => [
+              h('p', '这是通过 jsDelivr 引入的对话框组件。'),
+              h('p', [
+                '当前设置: ',
+                h('strong', `标题栏: ${showTitleBar.value ? '显示' : '隐藏'}`),
+                ', ',
+                h('strong', `关闭按钮: ${showCloseButton.value ? '显示' : '隐藏'}`),
+                ', ',
+                h('strong', `可关闭: ${closable.value ? '是' : '否'}`)
+              ]),
+              h('p', [
+                '测试行为: ',
+                closable.value 
+                  ? '你可以点击右上角关闭按钮或按 Esc 来关闭。'
+                  : h('span', { style: 'color: #dc3545;' }, '对话框已被锁定，无法通过常规方式关闭！')
+              ]),
+              h('br'),
+              h('pre', { style: 'background: #f8f9fa; padding: 10px; border-radius: 4px;' }, 
+                text
+              ),
+            ],
+            footer: () => h('div', { 
+              style: 'display: flex; justify-content: flex-end; padding-top: 10px; border-top: 1px solid #eee;' 
+            }, [
+              h('button', {
+                onClick: closeDialog,
+                style: 'padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer;'
+              }, '关闭对话框')
+            ])
+          }
+        )
+      ])
     ]
   }
 }
 
 const app = createApp(App)
-app.use(DialogView)
 app.mount('#app')
     </script>
   </body>

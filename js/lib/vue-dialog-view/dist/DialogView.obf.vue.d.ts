@@ -2,12 +2,14 @@ interface Props {
     modelValue: boolean;
     showTitleBar?: boolean;
     showCloseButton?: boolean;
+    closable?: boolean;
 }
 declare function __VLS_template(): {
     attrs: Partial<{}>;
     slots: {
         title?(_: {}): any;
         default?(_: {}): any;
+        footer?(_: {}): any;
     };
     refs: {
         dialogRef: HTMLDialogElement;
@@ -25,6 +27,7 @@ declare const __VLS_component: import('vue').DefineComponent<Props, {
 }>, {
     showTitleBar: boolean;
     showCloseButton: boolean;
+    closable: boolean;
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {
     dialogRef: HTMLDialogElement;
 }, HTMLDialogElement>;

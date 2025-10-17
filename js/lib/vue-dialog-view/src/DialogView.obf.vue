@@ -21,6 +21,10 @@
     <div class="_da3b3b2a4aeed1ee">
       <slot></slot>
     </div>
+
+    <div v-if="$slots.footer" class="_61879ba330d9a71c">
+      <slot name="footer"></slot>
+    </div>
   </dialog>
 </template>
 
@@ -31,11 +35,13 @@ interface Props {
   modelValue: boolean
   showTitleBar?: boolean
   showCloseButton?: boolean
+  closable?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showTitleBar: true,
-  showCloseButton: true
+  showCloseButton: true,
+  closable: true,
 })
 
 const emit = defineEmits<{
@@ -45,24 +51,32 @@ const emit = defineEmits<{
 const dialogRef = ref<HTMLDialogElement | null>(null)
 
 const openDialog = (): void => {
-  if (dialogRef.value && !dialogRef.value.open) {
-    dialogRef.value.showModal()
-  }
+  emit('update:modelValue', true)
 }
 
 const closeDialog = (): void => {
-  if (dialogRef.value && dialogRef.value.open) {
-    dialogRef.value.close()
-  }
+  emit('update:modelValue', false)
 }
 
 const handleDialogClose = (): void => {
+  if (!props.closable) {
+    if (props.modelValue) {
+      // not programmatically close
+      // re-open the dialog
+      nextTick(() => {
+        if (dialogRef.value && !dialogRef.value.open) {
+          dialogRef.value.showModal()
+        }
+      }) // Avoid using 'cancel' event because some browsers handle it incorrectly
+      return;
+    }
+  }
   if (props.modelValue) {
     emit('update:modelValue', false)
   }
 }
 
-watch(() => props.modelValue, async (newValue) => {
+watch(() => props.modelValue, async (newValue: boolean) => {
   await nextTick()
   
   if (newValue) {
@@ -149,5 +163,9 @@ defineExpose({
   overflow: auto;
   display: flex;
   flex-direction: column;
+}
+
+._61879ba330d9a71c {
+  margin-top: 0.5em;
 }
 </style>
