@@ -21,6 +21,10 @@
     <div class="dialog-content">
       <slot></slot>
     </div>
+
+    <div v-if="$slots.footer" class="dialog-footer">
+      <slot name="footer"></slot>
+    </div>
   </dialog>
 </template>
 
@@ -35,7 +39,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   showTitleBar: true,
-  showCloseButton: true
+  showCloseButton: true,
 })
 
 const emit = defineEmits<{
@@ -62,7 +66,7 @@ const handleDialogClose = (): void => {
   }
 }
 
-watch(() => props.modelValue, async (newValue) => {
+watch(() => props.modelValue, async (newValue: boolean) => {
   await nextTick()
   
   if (newValue) {
@@ -149,5 +153,11 @@ defineExpose({
   overflow: auto;
   display: flex;
   flex-direction: column;
+}
+
+.dialog-footer {
+  margin-top: 0.5em;
+  display: flex;
+  align-items: center;
 }
 </style>
