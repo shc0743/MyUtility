@@ -15,7 +15,7 @@
         role="button"
         aria-label="Close the dialog"
         class="_468ff1da37ead40a"
-        @click.prevent="closeDialog"
+        @click.prevent="dialogRef?.close()"
       >×</a>
     </div>
     <div class="_da3b3b2a4aeed1ee">

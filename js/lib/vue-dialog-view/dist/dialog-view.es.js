@@ -1,12 +1,12 @@
 (function(){"use strict";try{if(typeof document<"u"){var e=document.createElement("style");e.appendChild(document.createTextNode("._b4102a3b79656a37{padding:20px;border-radius:5px;border:1px solid gray;outline:0!important;max-width:calc(100% - 2em);max-height:calc(100% - 2em);box-sizing:border-box;overflow:hidden}._b4102a3b79656a37[open]{display:flex;flex-direction:column}._b4102a3b79656a37::backdrop{background:#00000080}._4d394b1507fdc584{display:flex;flex-direction:row;align-items:center;margin-bottom:.5em;min-height:24px;white-space:pre;overflow:hidden}._088d860d2fd75292{flex:1;text-align:center;font-weight:700;font-size:large;overflow:hidden;text-overflow:ellipsis}._468ff1da37ead40a{margin-left:.5em;text-decoration:none;color:#666;font-size:1.5em;line-height:1;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;background:none}._468ff1da37ead40a:hover{color:#333;background-color:#f0f0f0;border-radius:3px}._da3b3b2a4aeed1ee{flex:1;overflow:auto;display:flex;flex-direction:column}._61879ba330d9a71c{margin-top:.5em}")),document.head.appendChild(e)}}catch(o){console.error("vite-plugin-css-injected-by-js",o)}})();
-import { defineComponent as v, ref as V, watch as g, nextTick as r, createElementBlock as t, openBlock as s, mergeProps as w, createCommentVNode as n, createElementVNode as c, renderSlot as d, withModifiers as _ } from "vue";
-const b = {
+import { defineComponent as V, ref as g, watch as w, nextTick as r, createElementBlock as t, openBlock as s, mergeProps as b, createCommentVNode as i, createElementVNode as c, renderSlot as d, withModifiers as B } from "vue";
+const _ = {
   key: 0,
   class: "_4d394b1507fdc584"
-}, B = { class: "_088d860d2fd75292" }, y = { class: "_da3b3b2a4aeed1ee" }, k = {
+}, y = { class: "_088d860d2fd75292" }, k = { class: "_da3b3b2a4aeed1ee" }, C = {
   key: 1,
   class: "_61879ba330d9a71c"
-}, C = /* @__PURE__ */ v({
+}, D = /* @__PURE__ */ V({
   __name: "DialogView.obf",
   props: {
     modelValue: { type: Boolean },
@@ -16,10 +16,10 @@ const b = {
   },
   emits: ["update:modelValue"],
   setup(l, { expose: f, emit: p }) {
-    const a = l, i = p, e = V(null), m = () => {
-      i("update:modelValue", !0);
-    }, u = () => {
-      i("update:modelValue", !1);
+    const a = l, n = p, e = g(null), m = () => {
+      n("update:modelValue", !0);
+    }, v = () => {
+      n("update:modelValue", !1);
     }, h = () => {
       if (!a.closable && a.modelValue) {
         r(() => {
@@ -27,20 +27,20 @@ const b = {
         });
         return;
       }
-      a.modelValue && i("update:modelValue", !1);
+      a.modelValue && n("update:modelValue", !1);
     };
-    return g(() => a.modelValue, async (o) => {
+    return w(() => a.modelValue, async (o) => {
       await r(), o ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
     }), f({
       open: m,
-      close: u
-    }), (o, D) => (s(), t("dialog", w({
+      close: v
+    }), (o, u) => (s(), t("dialog", b({
       ref_key: "dialogRef",
       ref: e,
       class: "_b4102a3b79656a37"
     }, o.$attrs, { onClose: h }), [
-      l.showTitleBar ? (s(), t("div", b, [
-        c("span", B, [
+      l.showTitleBar ? (s(), t("div", _, [
+        c("span", y, [
           d(o.$slots, "title")
         ]),
         l.showCloseButton ? (s(), t("a", {
@@ -49,25 +49,25 @@ const b = {
           role: "button",
           "aria-label": "Close the dialog",
           class: "_468ff1da37ead40a",
-          onClick: _(u, ["prevent"])
-        }, "×")) : n("", !0)
-      ])) : n("", !0),
-      c("div", y, [
+          onClick: u[0] || (u[0] = B(($) => e.value?.close(), ["prevent"]))
+        }, "×")) : i("", !0)
+      ])) : i("", !0),
+      c("div", k, [
         d(o.$slots, "default")
       ]),
-      o.$slots.footer ? (s(), t("div", k, [
+      o.$slots.footer ? (s(), t("div", C, [
         d(o.$slots, "footer")
-      ])) : n("", !0)
+      ])) : i("", !0)
     ], 16));
   }
-}), M = {
+}), T = {
   install: (l) => {
-    l.component("DialogView", C);
+    l.component("DialogView", D);
   }
 };
 export {
-  C as DialogView,
-  M as DialogViewPlugin,
-  M as default
+  D as DialogView,
+  T as DialogViewPlugin,
+  T as default
 };
 //# sourceMappingURL=dialog-view.es.js.map
