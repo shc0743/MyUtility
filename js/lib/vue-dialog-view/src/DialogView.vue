@@ -29,7 +29,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onMounted } from 'vue'
 
 interface Props {
   modelValue: boolean
@@ -86,6 +86,14 @@ watch(() => props.modelValue, async (newValue: boolean) => {
   } else {
     if (dialogRef.value && dialogRef.value.open) {
       dialogRef.value.close()
+    }
+  }
+})
+
+onMounted(() => {
+  if (props.modelValue) {
+    if (dialogRef.value && !dialogRef.value.open) {
+      dialogRef.value.showModal()
     }
   }
 })
