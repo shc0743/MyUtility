@@ -9,14 +9,12 @@
       <span class="_088d860d2fd75292">
         <slot name="title"></slot>
       </span>
-      <a
+      <button
         v-if="showCloseButton"
-        href="javascript:void(0)"
-        role="button"
         aria-label="Close the dialog"
         class="_468ff1da37ead40a"
         @click.prevent="dialogRef?.close()"
-      >×</a>
+      >×</button>
     </div>
     <div class="_da3b3b2a4aeed1ee">
       <slot></slot>
@@ -152,6 +150,7 @@ defineExpose({
   line-height: 1;
   width: 24px;
   height: 24px;
+  padding: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -164,6 +163,11 @@ defineExpose({
   color: #333;
   background-color: #f0f0f0;
   border-radius: 3px;
+}
+
+._468ff1da37ead40a:focus-visible {
+  outline: 2px solid rgb(160, 207, 255);
+  outline-offset: -2px;
 }
 
 ._da3b3b2a4aeed1ee {
