@@ -12,7 +12,7 @@ const isSupported = ((): boolean => {
 // 在模块加载时直接创建 popover 容器
 const popoverContainer = ((): HTMLDivElement => {
   const popover = document.createElement('div')
-  popover.popover = 'auto'
+  popover.popover = 'manual'
   popover.style.width = popover.style.height = '0px';
   popover.style.top = popover.style.left = '-100%';
   popover.style.boxSizing = 'border-box'; popover.style.padding = '0px';
@@ -53,12 +53,11 @@ const closePopover = (): void => {
 }
 
 const createPopMessage = (options: MessageOptions | string): ReturnType<typeof ElMessage> => {
-  if (!isSupported) return ElMessage(options)
-
   const config: MessageOptions = typeof options === 'string' 
     ? { message: options } 
     : { ...options }
-  
+  if (!isSupported) return ElMessage(config)
+
   // 打开 popover
   openPopover()
   

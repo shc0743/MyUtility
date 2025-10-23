@@ -1,0 +1,44 @@
+{
+    "name": "el-message-in-popover",
+    "version": "1.0.0",
+    "description": "Show ElMessage in the popover to elevate its display hierarchy, preventing it from being overlapped by dialogs",
+    "main": "dist/ElPopMessage.js",
+    "types": "dist/ElPopMessage.d.ts",
+    "type": "module",
+    "files": [
+        "src/**",
+        "dist/**",
+        "README.md",
+        "tsconfig.json",
+        "LICENSE"
+    ],
+    "scripts": {
+        "build": "tsc"
+    },
+    "keywords": [
+        "front-end",
+        "el-message",
+        "popover",
+        "vue3",
+        "message",
+        "html5-dialog"
+    ],
+    "author": "chcs1013",
+    "license": "Unlicense",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/your-username/el-message-in-popover"
+    },
+    "bugs": {
+        "url": "https://github.com/your-username/el-message-in-popover/issues"
+    },
+    "homepage": "https://github.com/your-username/el-message-in-popover#readme",
+    "peerDependencies": {
+        "element-plus": "^2.9.11",
+        "vue": "^3.2.0"
+    },
+    "devDependencies": {
+        "element-plus": "^2.11.5",
+        "typescript": "^5.9.3"
+    }
+}
