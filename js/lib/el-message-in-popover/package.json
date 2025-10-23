@@ -1,6 +1,6 @@
 {
     "name": "el-message-in-popover",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Show ElMessage in the popover to elevate its display hierarchy, preventing it from being overlapped by dialogs",
     "main": "dist/ElPopMessage.js",
     "types": "dist/ElPopMessage.d.ts",
@@ -25,10 +25,6 @@
     ],
     "author": "chcs1013",
     "license": "Unlicense",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/your-username/el-message-in-popover"
-    },
     "bugs": {
         "url": "https://github.com/shc0743/MyUtility/issues"
     },
