@@ -105,7 +105,7 @@ defineExpose({
 
 <style>
 ._b4102a3b79656a37 {
-  padding: 20px;
+  padding: var(--dialog-padding, 20px);
   border-radius: 5px;
   border: 1px solid gray;
   outline: 0 !important;
@@ -129,9 +129,10 @@ defineExpose({
   flex-direction: row;
   align-items: center;
   margin-bottom: 0.5em;
-  min-height: 24px;
+  min-height: var(--dialog-title-height, 24px);
   white-space: pre;
   overflow: hidden;
+  user-select: none;
 }
 
 ._088d860d2fd75292 {

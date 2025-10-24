@@ -105,6 +105,30 @@ dialogRef.value.close()
 </script>
 ```
 
+## CSS Custom Properties
+
+DialogView component now supports the following CSS custom properties for easy styling customization:
+
+### Available Properties
+- `--dialog-padding`: Dialog content area padding (default: 20px)
+- `--dialog-title-height`: Title area height (default: 24px)
+
+### Usage Examples
+
+```css
+/* Global styles */
+:root {
+  --dialog-padding: 24px;
+  --dialog-title-height: 32px;
+}
+
+/* Specific scenario styles */
+.custom-dialog {
+  --dialog-padding: 16px;
+  --dialog-title-height: 28px;
+}
+```
+
 ## Browser Support
 
 This component requires a browser that supports the HTML5 `<dialog>` element. For older browsers, consider using a polyfill.
