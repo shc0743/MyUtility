@@ -21,7 +21,7 @@ const createPopMessage = (options: MessageOptions | string): ReturnType<typeof E
   // 为每个消息创建独立的 popover 容器
   const popover = document.createElement('div')
   popover.popover = 'manual'
-  popover.style.width = popover.style.height = popover.style.border = '0px'
+  popover.style.width = popover.style.height = popover.style.border = popover.style.padding = '0px'
   popover.style.top = popover.style.left = '-100%'
   popover.style.position = 'fixed'
   document.body.append(popover)
