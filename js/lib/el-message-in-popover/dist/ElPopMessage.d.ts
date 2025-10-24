@@ -1,4 +1,5 @@
 import { ElMessage, type MessageOptions } from 'element-plus';
+import 'element-plus/theme-chalk/el-message.css';
 type ElPopMessageFn = {
     (options: MessageOptions | string): ReturnType<typeof ElMessage>;
     closeAll: () => void;

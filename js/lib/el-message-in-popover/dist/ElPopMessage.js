@@ -1,4 +1,6 @@
 import { ElMessage } from 'element-plus';
+// @ts-ignore
+import 'element-plus/theme-chalk/el-message.css';
 const isSupported = (() => {
     try {
         const testElement = document.createElement('div');

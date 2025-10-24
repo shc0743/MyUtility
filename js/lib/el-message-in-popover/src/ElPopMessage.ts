@@ -1,4 +1,6 @@
 import { ElMessage, type MessageOptions, type MessageType } from 'element-plus'
+// @ts-ignore
+import 'element-plus/theme-chalk/el-message.css'
 
 const isSupported = ((): boolean => {
   try {
