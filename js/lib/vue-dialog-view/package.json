@@ -1,6 +1,6 @@
 {
     "name": "vue-dialog-view",
-    "version": "1.4.3",
+    "version": "1.4.4",
     "description": "A modern Vue 3 dialog component using native dialog element",
     "type": "module",
     "main": "./dist/dialog-view.umd.js",
@@ -37,7 +37,7 @@
         "@vitejs/plugin-vue": "^6.0.1",
         "rimraf": "^6.0.1",
         "typescript": "^5.9.3",
-        "vite": "^7.1.10",
+        "vite": "^7.1.12",
         "vite-plugin-css-injected-by-js": "^3.5.2",
         "vite-plugin-dts": "^4.5.4",
         "vue": "^3.5.22",

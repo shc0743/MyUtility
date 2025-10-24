@@ -10,12 +10,13 @@
         <slot name="title"></slot>
       </span>
       <button
-        v-if="showCloseButton"
+        v-if="showCloseButton && closable"
         aria-label="Close the dialog"
         class="dialog-close-button"
         @click.prevent="dialogRef?.close()"
       >×</button>
     </div>
+    
     <div class="dialog-content">
       <slot></slot>
     </div>
