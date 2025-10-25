@@ -143,8 +143,6 @@ defineExpose({
   font-size: large;
   overflow: hidden;
   text-overflow: ellipsis;
-  display: flex;
-  flex-direction: row;
 }
 
 .dialog-close-button {
