@@ -11,10 +11,11 @@
       </span>
       <button
         v-if="showCloseButton && closable"
+        type="button"
         aria-label="Close the dialog"
         class="dialog-close-button"
         @click.prevent="dialogRef?.close()"
-      >×</button>
+      >&times;</button>
     </div>
     
     <div class="dialog-content">
@@ -142,6 +143,8 @@ defineExpose({
   font-size: large;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  flex-direction: row;
 }
 
 .dialog-close-button {
