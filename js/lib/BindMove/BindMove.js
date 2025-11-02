@@ -144,8 +144,8 @@ export const BindMove_css = addCSS(`
 `);
 
 
-function addCSS(css, el = null, adopt = false) {
-    if ((el === null || adopt) && ('adoptedStyleSheets' in document)) {
+function addCSS(css, el = null) {
+    if (('adoptedStyleSheets' in document)) {
         const style = new CSSStyleSheet;
         style.replace(css);
         (el || document).adoptedStyleSheets.push(style);
