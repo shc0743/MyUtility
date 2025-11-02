@@ -1,6 +1,6 @@
 {
   "name": "bindmove",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "BindMove function (use browser pointer api to move a element)",
   "main": "BindMove.js",
   "type": "module",

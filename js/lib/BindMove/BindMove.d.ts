@@ -56,7 +56,7 @@ declare module "bindmove" {
      * @param adopt 是否使用 adoptedStyleSheets，默认为 false
      * @returns 返回添加的样式表或style元素
      */
-    export function addCSS(css: string, el?: Document | ShadowRoot | null, adopt?: boolean): CSSStyleSheet | HTMLStyleElement;
+    export function addCSS(css: string, el?: Document | ShadowRoot | null): CSSStyleSheet | HTMLStyleElement;
 
     /**
      * 绑定移动功能使用的CSS样式
