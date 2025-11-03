@@ -1,6 +1,6 @@
 {
   "name": "bindmove",
-  "version": "1.0.4",
+  "version": "1.0.3",
   "description": "BindMove function (use browser pointer api to move a element)",
   "main": "BindMove.js",
   "type": "module",
@@ -19,8 +19,5 @@
   "bugs": {
     "url": "https://github.com/shc0743/MyUtility/issues"
   },
-  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/BindMove#readme",
-  "dependencies": {
-    "add-css-constructed": "^1.0.0"
-  }
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/BindMove#readme"
 }
