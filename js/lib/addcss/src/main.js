@@ -10,7 +10,7 @@ export function addCSS(css_code, target = null) {
     } else {
         const style_node = document.createElement('style');
         if (style_node.styleSheet) style_node.styleSheet.cssText = css_code;
-        else style.append(document.createTextNode(css_code));
+        else style_node.append(document.createTextNode(css_code));
         style_node.innerHTML = css_code;
         (target || document.head || document.documentElement).append(style_node);
         return style_node;
