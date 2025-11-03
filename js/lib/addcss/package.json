@@ -1,0 +1,41 @@
+{
+  "name": "add-css-constructed",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "add a CSS to document or specified target using constructed stylesheet with fallback",
+  "main": "./dist/esm.js",
+  "types": "./d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/esm.js",
+      "require": "./dist/cjs.js",
+      "default": "./dist/umd.js"
+    }
+  },
+  "scripts": {
+    "build:esm": "esbuild src/main.js --format=esm --bundle --minify --sourcemap --outfile=dist/esm.js",
+    "build:cjs": "esbuild src/main.js --format=cjs --bundle --minify --sourcemap --outfile=dist/cjs.js",
+    "build:umd": "esbuild src/main.js --format=iife --global-name=addCSS --bundle --minify --outfile=dist/umd.js && node src/umd-process.js dist/umd.js addCSS",
+    "build": "npm run build:esm && npm run build:cjs && npm run build:umd"
+  },
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE",
+    "src/**",
+    "d.ts"
+  ],
+  "keywords": [
+    "front-end",
+    "css"
+  ],
+  "author": "chcs1013",
+  "license": "Unlicense",
+  "bugs": {
+    "url": "https://github.com/shc0743/MyUtility/issues"
+  },
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/addcss#readme",
+  "devDependencies": {
+    "esbuild": "^0.25.12"
+  }
+}
