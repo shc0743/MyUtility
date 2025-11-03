@@ -50,15 +50,6 @@ declare module "bindmove" {
     export function UnBindMove(el: HTMLElement): void;
 
     /**
-     * 添加CSS样式
-     * @param css CSS样式字符串
-     * @param el 要添加到的元素，默认为 null (添加到document)
-     * @param adopt 是否使用 adoptedStyleSheets，默认为 false
-     * @returns 返回添加的样式表或style元素
-     */
-    export function addCSS(css: string, el?: Document | ShadowRoot | null): CSSStyleSheet | HTMLStyleElement;
-
-    /**
      * 绑定移动功能使用的CSS样式
      */
     export const BindMove_css: CSSStyleSheet | HTMLStyleElement;

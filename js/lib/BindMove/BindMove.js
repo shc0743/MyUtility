@@ -1,4 +1,5 @@
 export const VERSION = BigInt('20250419224610');
+import { addCSS } from 'add-css-constructed'
 
 const PID = 'fdf3404207ac433293f97c1dd3ca103a';
 export { PID as ProductId };
@@ -144,23 +145,8 @@ export const BindMove_css = addCSS(`
 `);
 
 
-function addCSS(css, el = null) {
-    if (('adoptedStyleSheets' in document)) {
-        const style = new CSSStyleSheet;
-        style.replace(css);
-        (el || document).adoptedStyleSheets.push(style);
-        return style;
-    } else {
-        let EL = document.createElement('style');
-        EL.innerHTML = css;
-        (el || document.head || document.documentElement).append(EL);
-        return EL;
-    }
-}
 
 
-
-export { addCSS as addCSS };
     
 export {
     BindMove as BindMove,
