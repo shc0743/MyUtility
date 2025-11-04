@@ -1,6 +1,6 @@
 {
   "name": "simple-w32-context-menu",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A library to emulate Windows legacy context menu experience",
   "keywords": [
     "contextmenu",
@@ -22,5 +22,8 @@
   },
   "devDependencies": {
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "add-css-constructed": "^1.0.2"
   }
 }

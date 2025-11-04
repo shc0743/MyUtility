@@ -1,3 +1,4 @@
+import { addCSS } from 'add-css-constructed';
 export const menu_class = 'WINCLASS-_32768';
 export const LAST_POSITION = Symbol();
 let do_not_show_new_popup = false;
@@ -290,16 +291,5 @@ addCSS(`
 function stop(ev) {
     ev.preventDefault();
     ev.stopPropagation();
-}
-function addCSS(text) {
-    if ('adoptedStyleSheets' in document) {
-        const css = new CSSStyleSheet;
-        css.replace(text);
-        document.adoptedStyleSheets.push(css);
-    }
-    let css = document.createElement('style');
-    css.innerHTML = text;
-    document.head.append(css);
-    return css;
 }
 //# sourceMappingURL=main.js.map
