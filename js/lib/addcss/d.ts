@@ -11,6 +11,10 @@ export function hasDOM(): boolean;
  */
 export function isAdoptedStyleSheetsSupported(): boolean;
 
+export interface RemovableCSSStyleSheet extends CSSStyleSheet {
+    remove(): boolean;
+}
+
 /**
  * Add CSS styles to document or shadow root
  * @param {string} css_code - CSS code string
@@ -18,7 +22,15 @@ export function isAdoptedStyleSheetsSupported(): boolean;
  * @returns {CSSStyleSheet|HTMLStyleElement} The added stylesheet or style element
  * @throws {Error} When no DOM is detected and no target provided
  */
-export function addCSS(css_code: string, target?: Document | ShadowRoot | null): CSSStyleSheet | HTMLStyleElement;
+export function addCSS(css_code: string, target?: Document | ShadowRoot | null): RemovableCSSStyleSheet | HTMLStyleElement;
+
+/*
+Removes a CSS style sheet fron document or specified target
+*/
+export function removeCSS(
+    stylesheet: CSSStyleSheet | HTMLStyleElement, 
+    target?: Document | ShadowRoot | null
+): boolean;
 
 export { addCSS as default }
 

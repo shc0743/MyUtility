@@ -62,6 +62,12 @@ Adds CSS styles to the specified target.
 **Throws:**
 - `Error`: When no DOM is detected and no target provided
 
+### `removeCSS(stylesheet, target?)`
+Removes CSS style sheet from document or specified target.
+
+**Returns:**
+- `boolean`: True if the removal operation is successful
+
 ### `hasDOM()`
 Checks if DOM environment is available.
 
