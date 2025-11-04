@@ -25,7 +25,7 @@ export function addCSS(css_code, target = null) {
 export function removeCSS(stylesheet, target = null) {
     ensureDOM(target);
     if (!target) target = document;
-    if (typeof stylesheet.remove === 'function') {
+    if (stylesheet instanceof HTMLElement) {
         stylesheet.remove()
         return (!stylesheet.isConnected)
     }
