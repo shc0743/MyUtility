@@ -1,13 +1,13 @@
-import { addCSS, BindMove, BindMove_css } from 'bindmove';
+import { BindMove, BindMove_css } from 'bindmove';
 import { ZIndexManagerClass } from 'dom-zindex-manager';
+import { addCSS } from 'add-css-constructed';
 
 
 
-export let ResizableWidgetCSS1 = `
-$$TAG$:not(:has([slot="widget-caption"])) {
+export const ResizableWidgetCSS2 = `
+:host:not(:has([slot="widget-caption"])) {
     --no-caption: none;
 }
-`, ResizableWidgetCSS2 = `
 :host {
     position: absolute;
     z-index: 1002;
@@ -67,7 +67,7 @@ export class HTMLResizableWidgetElement extends HTMLElement {
         super();
 
         this.#shadowRoot = this.attachShadow({ mode: 'open' });
-        addCSS(ResizableWidgetCSS2, this.#shadowRoot, true);
+        addCSS(ResizableWidgetCSS2, this.#shadowRoot);
 
         if (this.#shadowRoot.adoptedStyleSheets) {
             this.#shadowRoot.adoptedStyleSheets.push(BindMove_css);
@@ -273,7 +273,7 @@ let registeredResizableWidget = false;
 function myregisterResizableWidget(tagName = 'resizable-widget', force = false) {
     if (registeredResizableWidget && !force) return;
     registeredResizableWidget = true;
-    addCSS(ResizableWidgetCSS1.replaceAll('$$TAG$', tagName));
+    //addCSS(ResizableWidgetCSS1.replaceAll('$$TAG$', tagName));
     if (customElements.get(tagName)) {
         globalThis.console.warn('%c[npm::resizable-widget] %cERR! %CDuplicated element registration.', 
             'color: #007700', 'color: red; font-weight: bold;', 'font-weight: bold;');
