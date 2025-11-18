@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
@@ -6,9 +7,12 @@ from cryptography.hazmat.primitives import hashes
 from typing import List, Optional, Dict, Any
 import click
 import textwrap
+import os
+
+CERTDB_DATABASE_FILE = os.getenv('CERTDB_DATABASE_FILE', 'certificates.db')
 
 # 数据库初始化
-def init_db(db_path: str = "certificates.db") -> None:
+def init_db(db_path: str = CERTDB_DATABASE_FILE) -> None:
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -60,7 +64,7 @@ def parse_certificate(cert_path: str) -> Dict[str, Any]:
 
 # 数据库操作类
 class CertificateDB:
-    def __init__(self, db_path: str = "certificates.db"):
+    def __init__(self, db_path: str = CERTDB_DATABASE_FILE):
         self.db_path = db_path
         init_db(db_path)
     
@@ -91,7 +95,7 @@ class CertificateDB:
             cursor.execute("""
             SELECT id, domain, sans, issue_date, expiry_date, fingerprint, notes
             FROM certificates WHERE id = ?
-            """, (cert_id))
+            """, (cert_id,))
             row = cursor.fetchone()
             if row:
                 return {
