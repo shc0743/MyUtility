@@ -676,7 +676,7 @@ export class JsCon extends EventTarget {
                 }
                 if (cancelled) return false;
             }
-            const obj = this.#options.get(k);
+            let obj = this.#options.get(k);
             if (obj === false || obj === true || obj == null) {
                 jscon_data.set(k, v);
                 return (this.#options.set(k, v));
