@@ -5,7 +5,7 @@ con.registerConsoleAPI(globalThis.console);
 con.addErrorHandler();
 
 // usage: 
-// import("https://cdn.jsdelivr.net/npm/@chcs1013/jscon@0.1.4/loader-external.js").then(m => (m.default.open(), m))
+// import("https://cdn.jsdelivr.net/npm/@chcs1013/jscon@0.1.5/loader-external.js").then(m => (m.default.open(), m.default))
 // or use unpkg:
-// import("https://unpkg.com/@chcs1013/jscon@0.1.4/loader-external.js").then(m => (m.default.open(), m))
+// import("https://unpkg.com/@chcs1013/jscon@0.1.5/loader-external.js").then(m => (m.default.open(), m.default))
 
