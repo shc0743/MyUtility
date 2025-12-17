@@ -97,19 +97,16 @@ ConRoot_Template.innerHTML = `
 
 <div class="jscon-messages-container"></div>
 `;
-addCSS(`
-:root {
-    --font-monospace: consolas, lucida console, courier new, monospace;
-}
-jscon-console-root {
-    --background: #FFFFFF;
-}
-`);
 
 export const jscon_style_text = ((`
 `+`
 [hidden] {
     display: none!important;
+}
+:host {
+    all: initial;
+    --font-monospace: consolas, lucida console, courier new, monospace;
+    --background: #FFFFFF;
 }
 resizable-widget, dialog > resizable-widget {
     z-index: 1073741823;

@@ -187,17 +187,15 @@ resizable-widget-content-container-5e5921c2 {
 </dialog>
 
 <div class="jscon-messages-container"></div>
-`;z(`
-:root {
-    --font-monospace: consolas, lucida console, courier new, monospace;
-}
-jscon-console-root {
-    --background: #FFFFFF;
-}
-`);var te=`
+`;var te=`
 
 [hidden] {
     display: none!important;
+}
+:host {
+    all: initial;
+    --font-monospace: consolas, lucida console, courier new, monospace;
+    --background: #FFFFFF;
 }
 resizable-widget, dialog > resizable-widget {
     z-index: 1073741823;

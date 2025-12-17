@@ -1,6 +1,6 @@
 {
   "name": "@chcs1013/jscon",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Simple JavaScript Console (test; still in development)",
   "keywords": [
     "front-end"
