@@ -4,7 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import dts from 'vite-plugin-dts'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 
-export default defineConfig({
+const config = ({
   plugins: [
     vue(),
     cssInjectedByJsPlugin(),
@@ -14,9 +14,10 @@ export default defineConfig({
   ],
   build: {
     lib: {
-      entry: fileURLToPath(new URL('./src/index.ts', import.meta.url)),
+      entry: null,
       name: 'DialogView',
-      fileName: (format) => `dialog-view.${format}.js`
+      fileName: () => { throw new Error('stub function') },
+      formats: ['umd', 'es'],
     },
     rollupOptions: {
       external: ['vue'],
@@ -28,10 +29,22 @@ export default defineConfig({
       },
     },
     sourcemap: true,
+    emptyOutDir: false,
   },
   css: {
     modules: {
       generateScopedName: '[hash:sha256]',
     },
   },
+});
+
+export default defineConfig(({ mode }) => {
+  if (mode === 'unobfuscated') {
+    config.build.lib.entry = fileURLToPath(new URL('./src/unobfuscated.ts', import.meta.url));
+    config.build.lib.fileName = _ => `unobfuscated.${_}.js`;
+  } else {
+    config.build.lib.entry = fileURLToPath(new URL('./src/index.ts', import.meta.url));
+    config.build.lib.fileName = _ => `dialog-view.${_}.js`;
+  }
+  return defineConfig(config);
 })

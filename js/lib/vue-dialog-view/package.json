@@ -1,6 +1,6 @@
 {
     "name": "vue-dialog-view",
-    "version": "1.5.2",
+    "version": "1.6.0",
     "description": "A modern Vue 3 dialog component using native dialog element",
     "type": "module",
     "main": "./dist/dialog-view.umd.js",
@@ -11,6 +11,11 @@
             "types": "./dist/index.d.ts",
             "import": "./dist/dialog-view.es.js",
             "require": "./dist/dialog-view.umd.js"
+        },
+        "./unobfuscated": {
+            "types": "./dist/unobfuscated.d.ts",
+            "import": "./dist/unobfuscated.es.js",
+            "require": "./dist/unobfuscated.umd.js"
         }
     },
     "files": [
@@ -27,7 +32,9 @@
         "clean": "rimraf dist",
         "obfuscate": "node ./obfuscate-classes.mjs",
         "build": "npm run clean && npm run obfuscate && npm run build-only",
-        "build-only": "vue-tsc --noEmit && vite build",
+        "build-only": "npm run build-only:normal && npm run build-only:unobfuscated",
+        "build-only:normal": "vue-tsc --noEmit && vite build",
+        "build-only:unobfuscated": "vue-tsc --noEmit && vite build --mode unobfuscated",
         "preview": "vite preview"
     },
     "peerDependencies": {
