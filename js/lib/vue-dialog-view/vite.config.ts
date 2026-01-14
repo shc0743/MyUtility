@@ -4,10 +4,9 @@ import { fileURLToPath, URL } from 'node:url'
 import dts from 'vite-plugin-dts'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 
-const config = ({
+const createConfig = () => ({
   plugins: [
     vue(),
-    cssInjectedByJsPlugin(),
     dts({
       insertTypesEntry: true,
     }),
@@ -39,12 +38,27 @@ const config = ({
 });
 
 export default defineConfig(({ mode }) => {
+  const config = createConfig();
   if (mode === 'unobfuscated') {
     config.build.lib.entry = fileURLToPath(new URL('./src/unobfuscated.ts', import.meta.url));
     config.build.lib.fileName = _ => `unobfuscated.${_}.js`;
+    config.plugins.push(cssInjectedByJsPlugin());
+  } else if (mode === 'cssless') {
+    config.build.lib.entry = fileURLToPath(new URL('./src/unobfuscated.ts', import.meta.url));
+    config.build.lib.fileName = _ => `cssless.${_}.js`;
+  } else if (mode === 'cssless-obfuscated') {
+    config.build.lib.entry = fileURLToPath(new URL('./src/index.ts', import.meta.url));
+    config.build.lib.fileName = _ => `cssless-obfuscated.${_}.js`;
+    config.build.rollupOptions.output.assetFileNames = (assetInfo) => {
+      if (assetInfo.name && assetInfo.name === 'vue-dialog-view.css') {
+        return 'vue-dialog-view-obfuscated.css'
+      }
+      return undefined
+    };
   } else {
     config.build.lib.entry = fileURLToPath(new URL('./src/index.ts', import.meta.url));
     config.build.lib.fileName = _ => `dialog-view.${_}.js`;
+    config.plugins.push(cssInjectedByJsPlugin());
   }
   return defineConfig(config);
 })

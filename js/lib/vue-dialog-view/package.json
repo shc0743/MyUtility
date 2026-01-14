@@ -1,11 +1,12 @@
 {
     "name": "vue-dialog-view",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "A modern Vue 3 dialog component using native dialog element",
     "type": "module",
     "main": "./dist/dialog-view.umd.js",
     "module": "./dist/dialog-view.es.js",
     "types": "./dist/index.d.ts",
+    "style": "./dist/vue-dialog-view.css",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
@@ -16,6 +17,22 @@
             "types": "./dist/unobfuscated.d.ts",
             "import": "./dist/unobfuscated.es.js",
             "require": "./dist/unobfuscated.umd.js"
+        },
+        "./cssless": {
+            "types": "./dist/cssless.d.ts",
+            "import": "./dist/cssless.es.js",
+            "require": "./dist/cssless.umd.js"
+        },
+        "./cssless-obfuscated": {
+            "types": "./dist/cssless-obfuscated.d.ts",
+            "import": "./dist/cssless-obfuscated.es.js",
+            "require": "./dist/cssless-obfuscated.umd.js"
+        },
+        "./style": {
+            "default": "./dist/vue-dialog-view.css"
+        },
+        "./style-obfuscated": {
+            "default": "./dist/vue-dialog-view-obfuscated.css"
         }
     },
     "files": [
@@ -31,10 +48,13 @@
         "dev": "vite",
         "clean": "rimraf dist",
         "obfuscate": "node ./obfuscate-classes.mjs",
-        "build": "npm run clean && npm run obfuscate && npm run build-only",
-        "build-only": "npm run build-only:normal && npm run build-only:unobfuscated",
-        "build-only:normal": "vue-tsc --noEmit && vite build",
-        "build-only:unobfuscated": "vue-tsc --noEmit && vite build --mode unobfuscated",
+        "build": "npm run clean && npm run obfuscate && npm run type-check && npm run build-only",
+        "type-check": "vue-tsc --noEmit",
+        "build-only": "npm run build-only:normal && npm run build-only:unobfuscated && npm run build-only:cssless && npm run build-only:cssless-obfuscated",
+        "build-only:normal": "vite build",
+        "build-only:unobfuscated": "vite build --mode unobfuscated",
+        "build-only:cssless": "vite build --mode cssless",
+        "build-only:cssless-obfuscated": "vite build --mode cssless-obfuscated",
         "preview": "vite preview"
     },
     "peerDependencies": {

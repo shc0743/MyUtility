@@ -104,7 +104,7 @@ defineExpose({
 })
 </script>
 
-<style>
+<style scoped>
 .dialog-view {
   padding: var(--dialog-padding, 20px);
   border-radius: 5px;

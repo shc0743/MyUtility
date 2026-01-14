@@ -114,7 +114,7 @@ function replaceClasses(content, classMap) {
   // 替换 <style> 中的类名
   content = content.replace(/(\.)([\w-]+)/g, (match, dot, cls) => {
     return classMap[cls] ? `.${classMap[cls]}` : match;
-  });
+  }).replace(/<style\s+scoped/g, '<style');
 
   return content;
 }
