@@ -78,6 +78,7 @@ const App = {
     const showTitleBar = ref(true)
     const showCloseButton = ref(true)
     const closable = ref(true)
+    const closed = ref(false)
     
     const closeDialog = () => {
       show.value = false
@@ -87,7 +88,7 @@ const App = {
       h('div', { style: 'padding: 20px;' }, [
         // 控制面板
         h('div', { style: 'margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;' }, [
-          h('h2', { style: 'margin-top: 0;' }, '对话框控制面板'),
+          h('h2', { style: 'margin-top: 0;' }, '对话框控制面板' + (closed.value ? ' (对话框被关闭！)' : '')),
           
           h('div', { style: 'display: flex; gap: 20px; flex-wrap: wrap;' }, [
             // 控制选项
@@ -152,6 +153,10 @@ const App = {
               if (closable.value) {
                 show.value = value 
               }
+            },
+            'onClosed': () => {
+              closed.value = true
+              setTimeout(() => closed.value = false, 1000)
             },
             showTitleBar: showTitleBar.value,
             showCloseButton: showCloseButton.value,

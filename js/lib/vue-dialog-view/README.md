@@ -182,6 +182,7 @@ These variables work consistently across all build variants.
 | Event               | Description                   |
 | ------------------- | ----------------------------- |
 | `update:modelValue` | Fired when visibility changes |
+| `closed` | Fired when the dialog really closed |
 
 ---
 

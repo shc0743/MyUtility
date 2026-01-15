@@ -22,8 +22,10 @@ declare const __VLS_component: import('vue').DefineComponent<Props, {
     close: () => void;
 }, {}, {}, {}, import('vue').ComponentOptionsMixin, import('vue').ComponentOptionsMixin, {} & {
     "update:modelValue": (value: boolean) => any;
+    closed: () => any;
 }, string, import('vue').PublicProps, Readonly<Props> & Readonly<{
     "onUpdate:modelValue"?: ((value: boolean) => any) | undefined;
+    onClosed?: (() => any) | undefined;
 }>, {
     showTitleBar: boolean;
     showCloseButton: boolean;

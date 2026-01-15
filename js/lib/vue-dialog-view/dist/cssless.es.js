@@ -13,7 +13,7 @@ const C = {
     showCloseButton: { type: Boolean, default: !0 },
     closable: { type: Boolean, default: !0 }
   },
-  emits: ["update:modelValue"],
+  emits: ["update:modelValue", "closed"],
   setup(o, { expose: u, emit: s }) {
     const l = o, a = s, e = V(null), v = () => {
       a("update:modelValue", !0);
@@ -26,7 +26,7 @@ const C = {
         });
         return;
       }
-      l.modelValue && a("update:modelValue", !1);
+      l.modelValue && a("update:modelValue", !1), a("closed");
     };
     return h(() => l.modelValue, async (t) => {
       await f(), t ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
@@ -65,7 +65,7 @@ const C = {
   for (const [l, a] of u)
     s[l] = a;
   return s;
-}, T = /* @__PURE__ */ M($, [["__scopeId", "data-v-567f5fcc"]]), P = {
+}, T = /* @__PURE__ */ M($, [["__scopeId", "data-v-9220fede"]]), P = {
   install: (o) => {
     o.component("DialogView", T);
   }

@@ -46,6 +46,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
+  (e: 'closed'): void
 }>()
 
 const dialogRef = ref<HTMLDialogElement | null>(null)
@@ -74,6 +75,7 @@ const handleDialogClose = (): void => {
   if (props.modelValue) {
     emit('update:modelValue', false)
   }
+  emit('closed')
 }
 
 watch(() => props.modelValue, async (newValue: boolean) => {

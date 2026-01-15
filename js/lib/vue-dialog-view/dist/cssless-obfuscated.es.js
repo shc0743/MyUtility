@@ -1,4 +1,4 @@
-import { defineComponent as h, ref as w, watch as b, nextTick as r, onMounted as g, createElementBlock as t, openBlock as s, mergeProps as y, createCommentVNode as d, createElementVNode as c, renderSlot as i, withModifiers as B } from "vue";
+import { defineComponent as h, ref as w, watch as b, nextTick as c, onMounted as g, createElementBlock as s, openBlock as n, mergeProps as y, createCommentVNode as d, createElementVNode as r, renderSlot as i, withModifiers as B } from "vue";
 const k = {
   key: 0,
   class: "_4d394b1507fdc584"
@@ -13,38 +13,38 @@ const k = {
     showCloseButton: { type: Boolean, default: !0 },
     closable: { type: Boolean, default: !0 }
   },
-  emits: ["update:modelValue"],
+  emits: ["update:modelValue", "closed"],
   setup(l, { expose: f, emit: m }) {
-    const a = l, n = m, e = w(null), p = () => {
-      n("update:modelValue", !0);
+    const a = l, t = m, e = w(null), p = () => {
+      t("update:modelValue", !0);
     }, v = () => {
-      n("update:modelValue", !1);
+      t("update:modelValue", !1);
     }, V = () => {
       if (!a.closable && a.modelValue) {
-        r(() => {
+        c(() => {
           e.value && !e.value.open && e.value.showModal();
         });
         return;
       }
-      a.modelValue && n("update:modelValue", !1);
+      a.modelValue && t("update:modelValue", !1), t("closed");
     };
     return b(() => a.modelValue, async (o) => {
-      await r(), o ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
+      await c(), o ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
     }), g(() => {
       a.modelValue && e.value && !e.value.open && e.value.showModal();
     }), f({
       open: p,
       close: v
-    }), (o, u) => (s(), t("dialog", y({
+    }), (o, u) => (n(), s("dialog", y({
       ref_key: "dialogRef",
       ref: e,
       class: "_b4102a3b79656a37"
     }, o.$attrs, { onClose: V }), [
-      l.showTitleBar ? (s(), t("div", k, [
-        c("span", C, [
+      l.showTitleBar ? (n(), s("div", k, [
+        r("span", C, [
           i(o.$slots, "title")
         ]),
-        l.showCloseButton && l.closable ? (s(), t("button", {
+        l.showCloseButton && l.closable ? (n(), s("button", {
           key: 0,
           type: "button",
           "aria-label": "Close the dialog",
@@ -52,10 +52,10 @@ const k = {
           onClick: u[0] || (u[0] = B((M) => e.value?.close(), ["prevent"]))
         }, "×")) : d("", !0)
       ])) : d("", !0),
-      c("div", _, [
+      r("div", _, [
         i(o.$slots, "default")
       ]),
-      o.$slots.footer ? (s(), t("div", D, [
+      o.$slots.footer ? (n(), s("div", D, [
         i(o.$slots, "footer")
       ])) : d("", !0)
     ], 16));
