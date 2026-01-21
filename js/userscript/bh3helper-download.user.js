@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         bh3helper-enhancer
 // @namespace    4b8b542a-3500-49bd-b857-8d62413434c7
-// @version      1.2.3
+// @version      1.3.0
 // @description  在bh3helper（《崩坏3》剧情助手）上提供增强功能
 // @author       -
 // @match        https://bh3helper.xrysnow.xyz/*
+// @match        http://bh3helper.xrysnow.xyz/*
 // @icon         https://bh3helper.xrysnow.xyz/res/img/favicon.png
 // @grant        unsafeWindow
 // @grant        GM_getValue
@@ -14,15 +15,15 @@
 // @grant        GM_getResourceText
 // @grant        GM_xmlhttpRequest
 // @connect      self
-// @require      https://cdn.jsdelivr.net/npm/vue@3.5.26/dist/vue.global.prod.js#sha256-tAgDTQf3yKkfEX+epicjVa5F9Vy9oaStBwStjXA5gJU=
-// @require      https://cdn.jsdelivr.net/npm/@chcs1013/vue-expose-to-window@1.0.1/index.js#sha256-0zwVsGUKw70iQnySKWxo81tEXaVhqZg7rF2yBH+0wAg=
-// @require      https://cdn.jsdelivr.net/npm/vue-dialog-view@1.7.1/dist/cssless.umd.js#sha256-cH5113wW7G1+ZShZmyVUL1FVmBUEHzCzTO/Qy7+gMDg=
-// @require      https://cdn.jsdelivr.net/npm/vue3-tree@0.11.5/dist/vue3-tree.js#sha256-cUAWVV0/sMo44jc45yFH2uEv6+AkMGKZod8QdY/vMqA=
-// @require      https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js#sha256-w7NPLp9edNTX1k4BysegwBlUxsQGQU1CGFx7U9aHXd8=
-// @require      https://cdn.jsdelivr.net/npm/add-css-constructed@1.1.1/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
-// @require      https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js#sha256-lfTRy/CZ9XFhtmS8BIQm7D35JjeAGkx5EW6DMVqnh+c=
-// @resource     dialog_css https://cdn.jsdelivr.net/npm/vue-dialog-view@1.7.1/dist/vue-dialog-view.css#sha256-HnPUNAFITfEE27CBFvnXJJBIw7snbNTkexmuZ95u160=
-// @resource     treeview_css https://cdn.jsdelivr.net/npm/vue3-tree@0.11.5/dist/style.css#sha256-pMwswRTw7jawlpe60P8W2yItWloUeREwp4DwlZkp3OI=
+// @require      https://unpkg.com/vue@3.5.26/dist/vue.global.prod.js#sha256-tAgDTQf3yKkfEX+epicjVa5F9Vy9oaStBwStjXA5gJU=
+// @require      https://unpkg.com/@chcs1013/vue-expose-to-window@1.0.1/index.js#sha256-0zwVsGUKw70iQnySKWxo81tEXaVhqZg7rF2yBH+0wAg=
+// @require      https://unpkg.com/vue-dialog-view@1.7.1/dist/cssless.umd.js#sha256-cH5113wW7G1+ZShZmyVUL1FVmBUEHzCzTO/Qy7+gMDg=
+// @require      https://unpkg.com/vue3-tree@0.11.5/dist/vue3-tree.js#sha256-cUAWVV0/sMo44jc45yFH2uEv6+AkMGKZod8QdY/vMqA=
+// @require      https://unpkg.com/fflate@0.8.2/umd/index.js#sha256-w7NPLp9edNTX1k4BysegwBlUxsQGQU1CGFx7U9aHXd8=
+// @require      https://unpkg.com/add-css-constructed@1.1.1/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
+// @require      https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js#sha256-lfTRy/CZ9XFhtmS8BIQm7D35JjeAGkx5EW6DMVqnh+c=
+// @resource     dialog_css https://unpkg.com/vue-dialog-view@1.7.1/dist/vue-dialog-view.css#sha256-HnPUNAFITfEE27CBFvnXJJBIw7snbNTkexmuZ95u160=
+// @resource     treeview_css https://unpkg.com/vue3-tree@0.11.5/dist/style.css#sha256-pMwswRTw7jawlpe60P8W2yItWloUeREwp4DwlZkp3OI=
 // @supportURL   https://github.com/shc0743/MyUtility/issues/new?title=bh3helper-enhancer:%20
 // @run-at       document-start
 // @license      GPL-3.0
@@ -31,12 +32,14 @@
 ((async function (window, context) {
     const CONFIG = {
         SHADOW_ROOT_MODE: "closed",
+        ENFORCE_HTTPS: true,
         CONTENT_WAIT_TIMEOUT: 15000,
         PAGE_LOAD_WAIT_TIMEOUT: 20000,
         EXPORT_WAIT_TIMEOUT: 1000 * 60 * 3,
         DIALOG_SWITCH_CD_TIME: 80,
         COMMON_PAGE_BASE_URL: '/pages/common.html',
         PAGE_BASE_URL: '/pages/',
+        IGNORE_COLOR_CODE: ['#fedf4c'],
     };
 
     // ---------- //
@@ -141,6 +144,11 @@
     // ---------- //
 
     // Initial
+
+    if (CONFIG.ENFORCE_HTTPS && window.location.protocol === 'http:') {
+        window.location.href = window.location.href.replace(/^http:\/\//, 'https://');
+        return;
+    }
 
     window.addEventListener('message', MessageHandler);
 
@@ -705,7 +713,7 @@ details[open] > .dlg-help-summary::before {
                         splitCollections: true,
                         outputFilenameFormat: '',
                         collectionFilenameFormat: '',
-                        useColorTag: true,
+                        useColorTag: false,
                         autoParseLzJs: true,
                         includeContent_mainline: true,
                         includeContent_subplot: true,
@@ -945,12 +953,18 @@ details[open] > .dlg-help-summary::before {
         };
     }
 
-    function postLoadMessage() { 
+    function postLoadMessage() {
         const target = window.opener || ((window.parent == window.self) ? null : window.parent);
         if (!target) return;
+        let windowId; try {
+            windowId = new URL((new URL(window.location.href)).hash.substring(1), window.location.href).searchParams.get('__windowId');
+        } catch {
+            windowId = null;
+        }
         target.postMessage({
             rpc_action: 'load',
             password: state.rpc_password,
+            windowId: windowId
         }, window.location.origin);
     }
 
@@ -999,7 +1013,7 @@ details[open] > .dlg-help-summary::before {
      */
     function MessageHandler(event) {
         const { data, origin, source } = event;
-        if (origin !== window.location.origin) return;
+        // if (origin !== window.location.origin) return;
         if (!data) return;
         if (!state.rpc_password) return;
         if (
@@ -1008,12 +1022,28 @@ details[open] > .dlg-help-summary::before {
         ) return;
         const action = data.rpc_action;
 
-        switch (action) {
+        if (action) switch (action) {
             case 'load':
                 if (temp.loadresolver) {
+                    // 💩山代码😂（仅出于兼容性原因保留，勿在新代码中使用！）
                     temp.loadresolver();
                     temp.loadresolver = null;
                 }
+                if (data.windowId) { 
+                    const resolve = temp['__onloadResolver:' + data.windowId];
+                    if (resolve) {
+                        resolve();
+                        delete temp['__onloadResolver:' + data.windowId];
+                    }
+                }
+                break;
+            
+            case 'ping':
+                source.postMessage({
+                    rpc_action: 'pong',
+                    password: state.rpc_password,
+                    rpc_invoker_nonce: data.rpc_invoke_nonce,
+                });
                 break;
             
             case 'automated_controlled_overlay': {
@@ -1027,34 +1057,77 @@ details[open] > .dlg-help-summary::before {
             case 'downloadStory':
                 source.postMessage({
                     rpc_action: 'downloadStoryRequestAccepted',
-                    rpc_invoke_nonce: data.rpc_invoke_nonce,
+                    password: state.rpc_password,
+                    rpc_invoke_nonce: data.rpc_invoke_nonce, // 💩山字段
+                    rpc_invoker_nonce: data.rpc_invoke_nonce, // 新字段，尽量使用这个
                 });
                 pgDownloadWorker(data.config, true).then((ret) => {
                     source.postMessage(Object.assign({
                         rpc_action: 'downloadStoryResult',
                         rpc_invoke_nonce: data.rpc_invoke_nonce, // ***
+                        rpc_invoker_nonce: data.rpc_invoke_nonce, // 新字段，尽量使用这个
+                        password: state.rpc_password,
                         success: true,
-                    }, ret), window.location.origin);
+                    }, ret), origin);
                 }).catch(error => {
                     console.error("[bh3helper-downloader] E: 下载失败: ", error);
                     source.postMessage({
                         rpc_action: 'downloadStoryResult',
                         rpc_invoke_nonce: data.rpc_invoke_nonce,
+                        rpc_invoker_nonce: data.rpc_invoke_nonce, // 新字段，尽量使用这个
+                        password: state.rpc_password,
                         success: false,
                         data: String(error),
-                    }, window.location.origin);
+                    }, origin);
                 });
                 break;
             
             case 'downloadStoryRequestAccepted':
             case 'downloadStoryResult':
                 if (temp.downloadresolver) {
+                    // 💩山代码😂（仅出于兼容性原因保留，勿在新代码中使用！）
                     temp.downloadresolver(data);
                     temp.downloadresolver = null;
                 }
                 break;
+            
+            case 'getWebStaticResources':
+                new Promise(r => setTimeout(r, 2000)).then(() => // 确保页面加载完成
+                source.postMessage({
+                    rpc_invoker_nonce: data.rpc_invoke_nonce, // 新模式使用nonce进行识别，根本不需要action
+                    password: state.rpc_password,
+                    success: true,
+                    data: (function() {
+                        const ret = new Set;
+                        for (const i of document.querySelectorAll('link[rel="stylesheet"]')) ret.add(new URL(i.href, window.location.href).href);// CSS
+                        for (const i of document.querySelectorAll('script[src]')) ret.add(new URL(i.src, window.location.href).href); // JS
+                        return ret;
+                    })(),
+                }, origin));
+                break;
+        }
+
+        // sbAI别tmd再写bug了！！！发送的时候是invoke_nonce，回复的时候是invoker_nonce，别tmd再天天混着写
+        if (MessageHandler.invoke_map && data.rpc_invoker_nonce) { 
+            const resolve = MessageHandler.invoke_map.get(data.rpc_invoker_nonce);
+            if (resolve) {
+                resolve(data);
+                MessageHandler.invoke_map.delete(data.rpc_invoker_nonce);
+            }
         }
     }
+    MessageHandler.invoke_map /** @type {Map<string, Function>} */ = new Map();
+    MessageHandler.registerResolver = (nonce, resolve, timeout = 0) => {
+        MessageHandler.invoke_map.set(nonce, resolve);
+        if (timeout) setTimeout(() => MessageHandler.removeResolver(nonce), timeout);
+    };
+    MessageHandler.removeResolver = (nonce) => {
+        if (MessageHandler.invoke_map.has(nonce)) {
+            MessageHandler.invoke_map.delete(nonce);
+            return true;
+        }
+        return false;
+    };
 
     async function pgDownloadWorker({
         format = 'text',
@@ -1490,69 +1563,63 @@ details[open] > .dlg-help-summary::before {
         const files = Object.create(null);
         try {
             ui.loading_indicator.show();
+            ui.loading_indicator.innerText = '正在初始化...';
 
             if (typeof ScriptIndex !== 'object') {
                 throw new Error('ScriptIndex 不是对象！目标网站可能修改了结构，请考虑更新或反馈此问题。');
             }
 
-            const filesData = Object.assign({
-                '/index.html': '/index.html',
-                '/pages/common.html': '/pages/common.html',
-                '/pages/search.html': '/pages/search.html',
-                '/res/img/favicon.png': '/res/img/favicon.png',
-            }, structuredClone(ScriptIndex));
-            // 寻找页面上的CSS
-            try { 
-                const responses = await Promise.all([
-                    LoadResource(new Request(new URL('/', window.location.href))),
-                    LoadResource(new Request(new URL('/pages/common.html', window.location.href))),
-                    LoadResource(new Request(new URL('/pages/search.html', window.location.href)))
-                ]);
-                const [indexPage, commonPage, searchPage] = await Promise.all(
-                    responses.map(response => response.text())
-                );
-
-                // 使用parser解析DOM
-                const parser = new DOMParser();
-                const indexDoc = parser.parseFromString(indexPage, 'text/html');
-                const commonDoc = parser.parseFromString(commonPage, 'text/html');
-                const searchDoc = parser.parseFromString(searchPage, 'text/html');
-
-                // 寻找CSS
-                const indexCss = indexDoc.querySelectorAll('link[rel="stylesheet"]');
-                const commonCss = commonDoc.querySelectorAll('link[rel="stylesheet"]');
-                const searchCss = searchDoc.querySelectorAll('link[rel="stylesheet"]');
-
-                // 合并所有CSS
-                const allCss = [...indexCss, ...commonCss, ...searchCss];
-                for (const css of allCss) {
-                    const href = css.href;
-                    if (href) {
-                        filesData[href] = href;
-                    }
+            const remoteBase = new URL(CONFIG.PAGE_BASE_URL, window.location.href);
+            const filelist = new Set();
+            { 
+                const presetFiles = [
+                    '/index.html',
+                    '/pages/common.html',
+                    '/pages/search.html',
+                    '/res/img/favicon.png',
+                ].concat(Object.values(ScriptIndex));
+                for (const file of presetFiles) {
+                    filelist.add(new URL(file, remoteBase.href).href); // 使用绝对路径，方便去重（Set自动去重）
+                }
+            }
+            
+            // 寻找页面上的CSS/JS 文件
+            const frame = new EmbeddedFrame(ui.root);
+            try {
+                frame.hide();
+                state.rpc_password = crypto.randomUUID();
+                const pages = '/,/pages/common.html,/pages/search.html'.split(',');
+                for (const page of pages) {
+                    ui.loading_indicator.innerText = `正在处理 ${page}`;
+                    await frame.load(page, true);
+                    ui.loading_indicator.innerText = `正在处理 ${page} 中的资源`;
+                    const resp = await frame.invoke('getWebStaticResources');
+                    for (const i of resp.data) filelist.add(i);
                 }
             } catch (error) {
-                console.warn('[bh3helper-downloader] find css failed:', error);
-                showMessage("警告：寻找页面上的 CSS 失败: " + error, 'error');
+                console.error('[bh3helper-downloader] find css failed:', error);
+                showMessage("警告：寻找页面上的 CSS/JS 失败: " + error, 'error');
+                return;
+            } finally {
+                frame.detach();
+                delete state.rpc_password;
             }
-            const keys = Reflect.ownKeys(filesData); // 目标网站的变量名
-            const total = keys.length;
-            const remoteBase = new URL(CONFIG.PAGE_BASE_URL, window.location.href);
+            const total = filelist.size;
             const updateProgress = (current, desc = '') => {
                 ui.loading_indicator.innerText = `正在处理第 ${current} (共 ${total} 个)\n${desc || '\u2060'}`;
             };
 
             // 逐个获取文件
-            for (let i = 0; i < total; i++) {
-                const key = keys[i];
-                const data = filesData[key];
+            let i = -1;
+            for (const data of filelist) {
+                ++i;
                 const url = new URL(data, remoteBase.href);
-                updateProgress(i + 1, `正在下载 ${key}`);
+                updateProgress(i + 1, `正在下载 ${data}`);
                 const res = await LoadResource(new Request(url.href));
-                let d, parsed = false;
-                if (/\.lz\.js$/.test(url.href)) {
+                let d = null, parsed = false;
+                if (options.autoParseLzJs && /\.js$/.test(url.href)) {
                     const text = await res.text(); d = text, parsed = false;
-                    if (options.autoParseLzJs && /^\s*?LoadDataLZ\(/.test(text)) try {
+                    if (/^\s*?LoadDataLZ\(/.test(text)) try {
                         // 疑似lzstring数据
                         let lzText, loader = (name, _) => lzText = _[0];
                         const f = new window.Function('LoadDataLZ', text); // dangerous,以后改
@@ -1560,7 +1627,7 @@ details[open] > .dlg-help-summary::before {
                         d = lz.decompressFromBase64(lzText);
                         parsed = true;
                     } catch (error) {
-                        console.warn('[bh3helper-downloader] decompress lzstring failed for file:', key);
+                        console.warn('[bh3helper-downloader] decompress lzstring failed for file:', data);
                         showMessage("警告：解压缩 LZString 数据失败: " + error, 'error');
                     }
                     d = new TextEncoder().encode(d);
@@ -1568,7 +1635,7 @@ details[open] > .dlg-help-summary::before {
                 else d = new Uint8Array(await res.arrayBuffer());
                 // 解析文件名
                 let filename = url.pathname.substring(1); // 去掉开头的/
-                if (parsed) filename = filename.replace(/\.lz\.js$/, '.json');
+                if (parsed) filename = filename.replace(/(\.lz)?\.js$/, '.json');
                 files[filename] = d;
             }
             updateProgress(total, DLUI_TEXT.onBeforeZipStart);
@@ -1911,7 +1978,7 @@ details[open] > .dlg-help-summary::before {
                     const text = extractNodeText(i, ctx).join('');
                     if (text) {
                         const colorProp = i.style.getPropertyValue('--color');
-                        value.push((colorProp && ctx.useColor) ? `<color=${colorProp}>${text}</color>` : text);
+                        value.push((colorProp && ctx.useColor && (!CONFIG.IGNORE_COLOR_CODE.includes(colorProp))) ? `<color=${colorProp}>${text}</color>` : text);
                         addLinebreak(i);
                     }
             }
@@ -2159,6 +2226,142 @@ details[open] > .dlg-help-summary::before {
                 }
             }
         })
+    }
+
+    class EmbeddedFrame {
+        #el = document.createElement('iframe');
+
+        /**
+         * 构造函数
+         * @param {HTMLElement} container - 要附加 iframe 的容器元素
+         */
+        constructor(container) {
+            container.append(this.#el);
+        }
+
+        /**
+         * 获取 iframe 元素
+         * @returns {HTMLIFrameElement} iframe 元素
+         */
+        get element() {
+            return this.#el;
+        }
+
+        /**
+         * 将 iframe 附加到新的容器
+         * @param {HTMLElement} newContainer - 新的容器元素
+         */
+        attach(newContainer) {
+            newContainer.append(this.#el);
+        }
+        /**
+         * 从当前容器中移除 iframe
+         */
+        detach() {
+            this.#el.remove();
+        }
+
+        /**
+         * 显示或隐藏 iframe
+         * @param {boolean} bShow - 是否显示 iframe，默认为 true
+         */
+        show(bShow = true) {
+            this.#el.style.display = bShow ? '' : 'none';
+        }
+        /**
+         * 隐藏 iframe
+         */
+        hide() {
+            this.show(false);
+        }
+
+        /**
+         * 加载指定 URL 到 iframe
+         * @param {string} url - 要加载的 URL
+         * @param {boolean} expectLoadMessage - 是否期望加载消息，默认为 false
+         * @param {number} timeout - 加载超时
+         * @returns {Promise<*>} 如果 expectLoadMessage 为 true，返回一个 Promise，在收到加载消息时 resolve
+         */
+        load(url, expectLoadMessage = false, timeout = 10000) {
+            const urlObj = new URL(url, window.location.href);
+            const hashUrl = new URL(urlObj.hash.substring(1) || '/', urlObj.href);
+            const windowId = crypto.randomUUID();
+            hashUrl.searchParams.set('__windowId', windowId);
+            urlObj.hash = '#' + hashUrl.pathname + hashUrl.search;
+            this.#el.src = urlObj.href;
+            if (expectLoadMessage) return new Promise((resolve, reject) => {
+                const r = (...args) => { 
+                    resolve(...args);
+                    this.#el.removeEventListener('error', reject);
+                }
+                temp['__onloadResolver:' + windowId] = r;
+                this.#el.addEventListener('error', reject, { once: true });
+                setTimeout(() => (reject(new Error('Timeout')), this.#el.removeEventListener('error', reject)), timeout);
+            });
+        }
+        /**
+         * 加载指定的文档到 iframe
+         * @param {string} doc - 要加载的 HTML 文档内容
+         */
+        loadDoc(doc) {
+            this.#el.srcdoc = doc;
+        }
+        /**
+         * 卸载 iframe 内容
+         */
+        unload() {
+            this.#el.src = 'data:text/html,<!DOCTYPE html><html><head></head><body></body></html>';
+        }
+
+        /**
+         * 检查 iframe 是否安全可访问
+         * @returns {boolean} 如果 iframe 可安全访问返回 true，否则返回 false
+         */
+        get isSafe() { 
+            try { return !!this.contentWindow; }
+            catch { return false; }
+        }
+        /**
+         * 获取 iframe 的 contentWindow
+         * @returns {Window} iframe 的 contentWindow
+         */
+        get contentWindow() {
+            return this.#el.contentWindow;
+        }
+        /**
+         * 获取 iframe 的 contentDocument
+         * @returns {Document} iframe 的 contentDocument
+         */
+        get contentDocument() {
+            return this.#el.contentDocument;
+        }
+
+        /**
+         * 向 iframe 发送消息
+         * @param {*} data - 要发送的数据
+         * @param {string} targetOrigin - 目标源，默认为 '*'
+         */
+        postMessage(data, targetOrigin = '*') {
+            this.#el.contentWindow.postMessage(data, targetOrigin);
+        }
+
+        /**
+         * 调用 iframe 中的方法
+         * @param {string} action - 要调用的动作
+         * @param {*} data - 要发送的数据
+         * @param {number} timeout - 超时时间
+         * @returns {Promise<*>} 返回一个 Promise，在收到响应时 resolve
+         * @throws {Error} 如果超时或发生错误
+         */
+        invoke(action, data, timeout = 10000) { 
+            return new Promise((resolve, reject) => {
+                if (timeout) setTimeout(() => reject(new Error('Timeout')), timeout);
+                const nonce = crypto.randomUUID();
+                MessageHandler.registerResolver(nonce, resolve, timeout);
+                const req = Object.assign({ rpc_action: action, rpc_invoke_nonce: nonce, password: state.rpc_password }, data || {});
+                this.postMessage(req, window.location.origin);
+            });
+        }
     }
 
 })((typeof unsafeWindow !== "undefined" ? unsafeWindow : window), window))
