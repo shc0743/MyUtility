@@ -141,10 +141,11 @@ def handle_cd_command(command, cwd, virtual_root):
         return cwd, f"<cd denied: {target_path} outside virtual root {virtual_root}>"
 
     try:
+        if len(tokens) > 2:
+            return Path.cwd(), f"FATAL: Due to security reason, cd command can only be invoked separately. The request has been blocked."
         os.chdir(target_path)
         new_cwd = Path.cwd()
-        if len(tokens) > 2:
-            return new_cwd, f"<cd success, cwd= {new_cwd}>\nWarning: Due to security reason, cd command can only be invoked separately. If 'cd path && other_cmd' is provided, other_cmd will be ignored. 'cd x && cd y' will only cd x. However, cd x/y or cd ../y is allowed."
+
         return new_cwd, f"<cd success, cwd= {new_cwd}>"
     except Exception as e:
         return cwd, f"<cd failed: {e}>"
@@ -239,6 +240,8 @@ def execute_subprocess(command, cwd):
         combined = combined.strip()
         if combined == "":
             combined = f"<no output> (returncode={rc})"
+        if len(combined) > 10000:
+            combined = combined[:10000] + f"[[TRUNCATED {len(combined) - 10000} chars]]"
         return f"Return code: {rc}\n{combined}"
     except Exception as e:
         return f"Error occurred while executing command: {e}"
@@ -498,10 +501,11 @@ def repl():
         
                 print(f"{C.YELLOW}\n模型请求执行命令 (tool={func_name}):\n>>> {command}{C.RESET}\n")
                 stripped = command.strip()
-                if stripped.startswith("cd ") or stripped == "cd":
-                    yn = 'y'
-                    print("自动执行cd命令。")
-                else:
+                # if stripped.startswith("cd ") or stripped == "cd":
+                    # yn = 'y'
+                    # print("自动执行cd命令。")
+                # else:
+                if True:
                     yn = input("是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果) ").strip()
                 if yn.lower() not in ("y", "n", "s"):
                     print("将把自定义消息传递给模型。")
