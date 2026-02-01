@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         bh3helper-enhancer
 // @namespace    4b8b542a-3500-49bd-b857-8d62413434c7
-// @version      1.3.0
+// @version      1.4.3
 // @description  在bh3helper（《崩坏3》剧情助手）上提供增强功能
 // @author       -
 // @match        https://bh3helper.xrysnow.xyz/*
@@ -18,15 +18,16 @@
 // @require      https://unpkg.com/vue@3.5.26/dist/vue.global.prod.js#sha256-tAgDTQf3yKkfEX+epicjVa5F9Vy9oaStBwStjXA5gJU=
 // @require      https://unpkg.com/@chcs1013/vue-expose-to-window@1.0.1/index.js#sha256-0zwVsGUKw70iQnySKWxo81tEXaVhqZg7rF2yBH+0wAg=
 // @require      https://unpkg.com/vue-dialog-view@1.7.1/dist/cssless.umd.js#sha256-cH5113wW7G1+ZShZmyVUL1FVmBUEHzCzTO/Qy7+gMDg=
-// @require      https://unpkg.com/vue3-tree@0.11.5/dist/vue3-tree.js#sha256-cUAWVV0/sMo44jc45yFH2uEv6+AkMGKZod8QdY/vMqA=
 // @require      https://unpkg.com/fflate@0.8.2/umd/index.js#sha256-w7NPLp9edNTX1k4BysegwBlUxsQGQU1CGFx7U9aHXd8=
 // @require      https://unpkg.com/add-css-constructed@1.1.1/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
 // @require      https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js#sha256-lfTRy/CZ9XFhtmS8BIQm7D35JjeAGkx5EW6DMVqnh+c=
+// @resource     treejs https://unpkg.com/vue3-tree@0.11.5/dist/vue3-tree.js#sha256-cUAWVV0/sMo44jc45yFH2uEv6+AkMGKZod8QdY/vMqA=
 // @resource     dialog_css https://unpkg.com/vue-dialog-view@1.7.1/dist/vue-dialog-view.css#sha256-HnPUNAFITfEE27CBFvnXJJBIw7snbNTkexmuZ95u160=
 // @resource     treeview_css https://unpkg.com/vue3-tree@0.11.5/dist/style.css#sha256-pMwswRTw7jawlpe60P8W2yItWloUeREwp4DwlZkp3OI=
-// @supportURL   https://github.com/shc0743/MyUtility/issues/new?title=bh3helper-enhancer:%20
 // @run-at       document-start
+// @sandbox      raw
 // @license      GPL-3.0
+// @supportURL   https://github.com/shc0743/MyUtility/issues/new?title=bh3helper-enhancer:%20
 // ==/UserScript==
 
 ((async function (window, context) {
@@ -39,7 +40,11 @@
         DIALOG_SWITCH_CD_TIME: 80,
         COMMON_PAGE_BASE_URL: '/pages/common.html',
         PAGE_BASE_URL: '/pages/',
-        IGNORE_COLOR_CODE: ['#fedf4c'],
+        IGNORE_COLOR_CODE: ['#fedf4c', '#fedf5c'],
+        STORY_PAGE_RANGE: [
+            [1, 199], // 主线第一部+第二部
+            [2001, 2004], // 2001:樱色轮回，2002:天命总部，2003:后崩坏书，2003.5:星坠之前，2004:后崩坏书第二部
+        ],
     };
 
     // ---------- //
@@ -52,13 +57,13 @@
 
     const PG_DOWNLOAD_STRUCT = {
         contentExtractRules: {
-            'dialog-step': '· {TEXT}',
+            //'dialog-step': '· {TEXT}',
             'dialog-synopsis-line': '> {TEXT}',
             'dialog-doc': '文档：{TEXT}',
             'default': '{TEXT}'
         },
         listIndentCount: 2,
-        multiLineDialogIntend: '\n    ：',
+        multiLineDialogIntend: '\n\t：',
     };
 
     const TYPOFIX = {
@@ -162,6 +167,8 @@
     } // 这一步会在document-start执行
 
     DOMPatch(); /// 应用DOM补丁
+
+    FixLoadOrderProblem(); // 目标网站有微妙的加载顺序问题，详见FixLoadOrderProblem函数的注释
 
     // ---------- //
 
@@ -404,7 +411,10 @@ details[open] > .dlg-help-summary::before {
     display: flex;
     align-items: center;
     gap: 4px;
-    margin: 0;
+    margin: 0px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow: auto;
 }
 .checkbox-inline>input[type="checkbox"] {
     margin: 0;
@@ -674,8 +684,8 @@ details[open] > .dlg-help-summary::before {
         <dialog-view v-model="showDownloadRawDataDlg">
             <template #title>下载原始数据</template>
             <div style="margin-bottom: 0.5em;">
-                <b style="margin-bottom: 0.5em; display: block;">即将打包下载所有原始数据(js)文件。</b>
-                <label><input type="checkbox" v-model="dlOptions.autoParseLzJs">&nbsp;自动解析lz.js数据</label>
+                <b style="margin-bottom: 0.5em; display: block;">即将打包下载所有数据文件，可用于{{ dlOptions.autoParseLzJs ? '进行文本分析' : '离线访问该网站' }}。</b>
+                <label class=checkbox-inline><input type="checkbox" v-model="dlOptions.autoParseLzJs">&nbsp;自动解析lz数据<span v-if=dlOptions.autoParseLzJs>（若需要获取可以直接使用浏览器访问的数据包，请取消选中此选项）</span></label>
             </div>
             <div class="btn-group">
                 <button type="button" class="primary" @click="download_raw_data">立即下载</button>
@@ -762,7 +772,7 @@ details[open] > .dlg-help-summary::before {
                     return this.page === '/';
                 },
                 isStoryPage() {
-                    return this.page === '/pages/common.html' && !isNaN(this.commonid) && (this.commonid >= 1 && this.commonid <= 199);
+                    return this.page === '/pages/common.html' && !isNaN(this.commonid) && checkIdInRange(this.commonid, CONFIG.STORY_PAGE_RANGE);
                 },
                 isSearchPage() {
                     return this.page === '/pages/search.html';
@@ -799,7 +809,7 @@ details[open] > .dlg-help-summary::before {
             },
             components: {
                 DialogView: DialogView.DialogView,
-                Tree: Tree.default,
+                Tree: ((new window.Function('window', 'Vue', GM_getResourceText('treejs') + ";return Tree"))(context, Vue)).default,
             },
             mounted() {
                 const stateDlOpt = state.dlOptions;
@@ -865,7 +875,7 @@ details[open] > .dlg-help-summary::before {
                     this.prompt('请输入新昵称', state.PJMS_NICKNAME ?? '寻梦者', '熵').then(nickname => {
                         if (nickname) state.PJMS_NICKNAME = nickname;
                         else delete state.PJMS_NICKNAME;
-                        showMessage(`设置已保存，刷新页面才能生效`);
+                        showMessage(`${nickname ? '设置已保存' : '已恢复默认'}，刷新页面才能生效`);
                     }).catch(() => {});
                 },
                 hidePanelInSession() {
@@ -1013,7 +1023,7 @@ details[open] > .dlg-help-summary::before {
      */
     function MessageHandler(event) {
         const { data, origin, source } = event;
-        // if (origin !== window.location.origin) return;
+        if (origin !== window.location.origin) return;
         if (!data) return;
         if (!state.rpc_password) return;
         if (
@@ -1092,7 +1102,6 @@ details[open] > .dlg-help-summary::before {
                 break;
             
             case 'getWebStaticResources':
-                new Promise(r => setTimeout(r, 2000)).then(() => // 确保页面加载完成
                 source.postMessage({
                     rpc_invoker_nonce: data.rpc_invoke_nonce, // 新模式使用nonce进行识别，根本不需要action
                     password: state.rpc_password,
@@ -1103,7 +1112,7 @@ details[open] > .dlg-help-summary::before {
                         for (const i of document.querySelectorAll('script[src]')) ret.add(new URL(i.src, window.location.href).href); // JS
                         return ret;
                     })(),
-                }, origin));
+                }, origin);
                 break;
         }
 
@@ -1142,6 +1151,7 @@ details[open] > .dlg-help-summary::before {
         const result = [];
         const extractRulesArr = Object.entries(PG_DOWNLOAD_STRUCT.contentExtractRules);
         const nodeTextExt = { useColor: useColorTag };
+        const cssInjected = addCSS(`html.no-scroll{overflow:unset !important;}`); // 解决快速切换时的滚动条闪烁问题
         ui.loading_indicator.show();
         ui.loading_indicator.innerText = '正在下载...';
 
@@ -1149,13 +1159,13 @@ details[open] > .dlg-help-summary::before {
             // 1. 获取所有 .external-link
             const main_content = document.getElementById('main-content');
             const constraints = [], otherSelectors = [];
-            if (!includeMainline) constraints.push(':not(#text-review-switch)');
+            if (!includeMainline) constraints.push(':not(#text-review-switch):not(.text-review-wrapper)');
             // if (!includeCollections) constraints.push(':not(#collection-review-switch)');
             if (includeRecapitulation) otherSelectors.push('.content-section#前情提要 div.external-link:not(:empty)');
-            const selectorBase = `.content-section.level-4{}${constraints.join('')} div.external-link:not(:empty)`; // 注意必须是div，而不是<a>，<a>是真·外链
+            const selectorBase = `${constraints.join('')}{} div.external-link:not(:empty)`; // 注意必须是div，而不是<a>，<a>是真·外链
             const selectorBaseEx = `.content > *{}${constraints.join('')} > div.external-link:not(:empty)${otherSelectors.length ? (',' + otherSelectors.join(',')) : ''}`;
-            const selectorMainStory = selectorBase.replace("{}", ":not(#collection-review-switch)") + ',' + selectorBaseEx.replace("{}", ":not(#collection-review-switch)"),
-                selectorCollections = selectorBase.replace("{}", "#collection-review-switch");
+            const selectorMainStory = selectorBase.replace("{}", ".text-review-wrapper>") + ',' + selectorBaseEx.replace("{}", ":not(#collection-review-switch)"),
+                selectorCollections = selectorBase.replace("{}", ".collection-review-wrapper");
             let skipCount = 0;
             const resources = []; // 额外资源
             
@@ -1172,10 +1182,16 @@ details[open] > .dlg-help-summary::before {
                 current++;
                 //if (!button.innerText) continue; //已经通过CSS选择器排除
                 updateProgress(current);
-                await new Promise(resolve => requestAnimationFrame(resolve));
+                await nextAnimationFrame();
                 button.click();
                 // 3. 等待内容加载完成
-                const loadContent = () => waitForElement('.dialog-viewer-wrapper:not([style*="display: none"])', CONFIG.CONTENT_WAIT_TIMEOUT, main_content).then(element => element).catch(() => null);
+                const btnParents = parents(button, '.content');
+                const contentContainer = btnParents[btnParents.length - 1] ?? main_content;
+                const loadContent = () => waitForElement(
+                    '.dialog-viewer-wrapper:not([style*="display: none"])',
+                    CONFIG.CONTENT_WAIT_TIMEOUT,
+                    contentContainer
+                ).catch(() => null);
                 let contentDialog = await loadContent();
                 if (!contentDialog) {
                     // 重试1次
@@ -1188,7 +1204,12 @@ details[open] > .dlg-help-summary::before {
                         return; // 跳过
                     }
                 }
-                if (contentDialog.classList.contains('dialog-embedded')) return;
+                await nextAnimationFrame();
+                if (contentDialog.classList.contains('dialog-embedded')) {
+                    console.log(`[bh3helper-downloader] I: 点击按钮 "${button.innerText}" 后加载出的内容对话框是嵌入对话框，正在跳过`);
+                    skipCount += 1;
+                    return;
+                }
                 updateProgress(current, button.innerText);
                 // 4. 提取对话内容
                 const contents = [];
@@ -1237,7 +1258,12 @@ details[open] > .dlg-help-summary::before {
                                     }
                                     lineTextBuffer.push(lineText);
                                 }
-                                if (lineTextBuffer.length === 0) continue;
+                                if (lineTextBuffer.length === 0) {
+                                    // 只有column2有内容，1没有，这出现在一些非常特殊的情况（例如第二部第十章的手记部分，一堆图片）
+                                    // 此时应该把field1添加到content中
+                                    contents.push(field1.trim());
+                                    continue;
+                                }
                                 let extractRule = PG_DOWNLOAD_STRUCT.contentExtractRules.default;
                                 for (let k = 0; k < extractRulesArr.length; k++) {
                                     const [classname, content] = extractRulesArr[k];
@@ -1278,7 +1304,7 @@ details[open] > .dlg-help-summary::before {
                 if (closeButton) closeButton.click();
                 else contentDialog.style.display = 'none'; // 手动关闭
                 // 8. 冷却
-                await new Promise(resolve => setTimeout(resolve, CONFIG.DIALOG_SWITCH_CD_TIME)); // 处理速度太快会导致浏览器渲染跟不上😂，只能放慢一点了
+                await delay(CONFIG.DIALOG_SWITCH_CD_TIME); // 处理速度太快会导致浏览器渲染跟不上😂，只能放慢一点了
                 return title;
             };
 
@@ -1289,6 +1315,13 @@ details[open] > .dlg-help-summary::before {
             // 统计总数
             total = mainStoryElements.length + (includeCollections ? collectionElements.length : 0);
             updateProgress(0);
+            // 处理静态的前情提要
+            if (includeRecapitulation) {
+                const m = main_content.querySelectorAll('#前情提要 > .content > .md-content');
+                if (m.length === 1) {
+                    result.push(`【前情提要】\n${extractNodeText({ childNodes: m }, nodeTextExt).join('')}\n\n`, '-----\n\n');
+                }
+            }
             // 如果选择拆分收藏品，那么单独收集收藏品内容
             if (splitCollections) {
                 // 先处理其他内容
@@ -1318,6 +1351,9 @@ details[open] > .dlg-help-summary::before {
 
             // 9. 合并所有内容
             result.pop();
+            if (result.length < 1 && !returnData) {
+                throw new Error('未找到任何内容');
+            }
             const blob = new Blob(result, { type: 'text/plain;charset=utf-8' });
             // 10. 获取页面标题，生成文件名
             const pageTitle = main_content.querySelector('.content-title-wrapper > .main-title')?.innerText || document.title;
@@ -1347,9 +1383,9 @@ details[open] > .dlg-help-summary::before {
                     files[filename] = new Uint8Array((new TextEncoder()).encode(resource.content));
                 }
                 updateProgress(current, DLUI_TEXT.onBeforeZipStart);
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await delay(500);
                 // 13. 压缩文件
-                const zipBlob = new Blob([fflate.zipSync(files)], { type: 'application/zip' });
+                const zipBlob = new Blob([await createZip(files)], { type: 'application/zip' });
                 updateProgress(current, '正在完成');
                 DownloadFile(URL.createObjectURL(zipBlob), `${document.title} - ${new Date().toLocaleString()}.zip`);
             } else {
@@ -1365,6 +1401,7 @@ details[open] > .dlg-help-summary::before {
             console.error('[bh3helper-downloader] download failed:', error);
         } finally {
             ui.loading_indicator.hide();
+            cssInjected.remove();
         }
     }
 
@@ -1432,7 +1469,7 @@ details[open] > .dlg-help-summary::before {
                     password: state.rpc_password,
                 })
                 updateProgress(current, '正在等待');
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                await delay(1500);
                 // 请求导出资源并等待完成
                 updateProgress(current, '正在获取数据');
                 const nonce = context.crypto.randomUUID();
@@ -1499,13 +1536,13 @@ details[open] > .dlg-help-summary::before {
                     zipEntries[filename] = data;
                 }
                 // cd
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                await delay(1000);
             }
             if (win && !win.closed) win.close();
             // 下载 zip 文件
             updateProgress(current, DLUI_TEXT.onBeforeZipStart);
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const zipBlob = new Blob([fflate.zipSync(zipEntries)], { type: 'application/zip' });
+            await delay(500);
+            const zipBlob = new Blob([await createZip(zipEntries)], { type: 'application/zip' });
             updateProgress(current, '正在完成');
             DownloadFile(URL.createObjectURL(zipBlob), `${document.title} - ${new Date().toLocaleString()}.zip`);
             setTimeout(() => {
@@ -1587,12 +1624,13 @@ details[open] > .dlg-help-summary::before {
             const frame = new EmbeddedFrame(ui.root);
             try {
                 frame.hide();
-                state.rpc_password = crypto.randomUUID();
+                state.rpc_password = context.crypto.randomUUID();
                 const pages = '/,/pages/common.html,/pages/search.html'.split(',');
                 for (const page of pages) {
                     ui.loading_indicator.innerText = `正在处理 ${page}`;
                     await frame.load(page, true);
                     ui.loading_indicator.innerText = `正在处理 ${page} 中的资源`;
+                    await delay(2000); // 确保页面加载完成
                     const resp = await frame.invoke('getWebStaticResources');
                     for (const i of resp.data) filelist.add(i);
                 }
@@ -1616,15 +1654,20 @@ details[open] > .dlg-help-summary::before {
                 const url = new URL(data, remoteBase.href);
                 updateProgress(i + 1, `正在下载 ${data}`);
                 const res = await LoadResource(new Request(url.href));
-                let d = null, parsed = false;
+                let d = null, parsed = false, isEntireLzJs = false;
                 if (options.autoParseLzJs && /\.js$/.test(url.href)) {
                     const text = await res.text(); d = text, parsed = false;
-                    if (/^\s*?LoadDataLZ\(/.test(text)) try {
+                    if (/LoadDataLZ\(.*?,/.test(text)) try {
                         // 疑似lzstring数据
-                        let lzText, loader = (name, _) => lzText = _[0];
-                        const f = new window.Function('LoadDataLZ', text); // dangerous,以后改
-                        f(loader);
-                        d = lz.decompressFromBase64(lzText);
+                        // let lzText, loader = (name, _) => lzText = _[0];
+                        // const f = new window.Function('LoadDataLZ', text); // dangerous,以后改
+                        // f(loader);
+                        // d = lz.decompressFromBase64(lzText);
+                        // 改为使用正则表达式提取，避免实际执行代码，增强安全性
+                        isEntireLzJs = /^LoadDataLZ\(.*?,.*\s*?$/.test(text);
+                        const regexp = /LoadDataLZ\s*?\(\s*?(.*?)\s*?,\s*?\[\s*?(".*?"|'.*?')\s*?\]\s*?\)/gm,
+                            replacer = (match, dataName, lzContent) => lz.decompressFromBase64(lzContent.slice(1, -1));
+                        d = d.replace(regexp, replacer);
                         parsed = true;
                     } catch (error) {
                         console.warn('[bh3helper-downloader] decompress lzstring failed for file:', data);
@@ -1635,13 +1678,13 @@ details[open] > .dlg-help-summary::before {
                 else d = new Uint8Array(await res.arrayBuffer());
                 // 解析文件名
                 let filename = url.pathname.substring(1); // 去掉开头的/
-                if (parsed) filename = filename.replace(/(\.lz)?\.js$/, '.json');
+                if (parsed) filename = filename.replace(/(\.lz)?\.js$/, isEntireLzJs ? '.json' : '.js');
                 files[filename] = d;
             }
             updateProgress(total, DLUI_TEXT.onBeforeZipStart);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await delay(500);
             // 创建压缩包
-            const zipBlob = new Blob([fflate.zipSync(files)], { type: 'application/zip' });
+            const zipBlob = new Blob([await createZip(files)], { type: 'application/zip' });
             updateProgress(total, '正在完成');
             DownloadFile(URL.createObjectURL(zipBlob), `${document.title} - 原始数据 - ${new Date().toLocaleString()}.zip`);
             setTimeout(() => {
@@ -1664,6 +1707,7 @@ details[open] > .dlg-help-summary::before {
         // 直接把数据按一样的方法硬编码拉过来😂
         const m1 = MainLineData, // 主线第一部
             m2 = MarsMainLineData, // 主线第二部
+            ow = GameOwData, // 开放世界
             rouge = GameRogueData; // 往世乐土
         // 上述数据全都在Scripts作用域里面，无法通过window或unsafeWindow访问
         // 因此直接这样写，这不是错误
@@ -1697,6 +1741,23 @@ details[open] > .dlg-help-summary::before {
                     },
                 ]
             },
+            {
+                id: 'other',
+                label: '其他内容',
+                nodes: [
+                    {
+                        id: 'other-ow',
+                        label: '开放世界',
+                        nodes: [
+                            {
+                                id: 'ow-content',
+                                label: '开放世界',
+                                nodes: [],
+                            }
+                        ]
+                    },
+                ]
+            },
         ];
         // 填充数据
         const processData = (reference, data, nodeId, part) => {
@@ -1712,7 +1773,7 @@ details[open] > .dlg-help-summary::before {
                 title = TYPOFIX.homepageStruct.mainlineGroupTypo[title];
             }
             const data1 = {
-                id: `mainline1-${title}`,
+                id: `mainline-${title}`,
                 label: title,
                 nodes: []
             };
@@ -1793,9 +1854,18 @@ details[open] > .dlg-help-summary::before {
             nodes: rougeContainer,
         });
 
+        // 手动添加开放世界数据
+        for (const i of Object.values(ow)) {
+            tree[2].nodes[0].nodes[0].nodes.push({
+                id: i.id,
+                label: i.title,
+                leaf: true,
+            });
+        }
+
         const processTree = (nodes) => {
             for (const node of nodes) {
-                node.checked = true;
+                if (!node.hidden) node.checked = true;
                 if (node.nodes) {
                     node.expanded = true;
                     processTree(node.nodes);
@@ -1831,6 +1901,98 @@ details[open] > .dlg-help-summary::before {
         } catch (error) {
             console.warn('[bh3helper-downloader] Unable to patch nickname:', error);
         }
+    }
+
+    const extractNodeText_unityRichTextTagMap = {
+        'B': 'b',
+        'STRONG': 'b',
+        'I': 'i',
+        'U': 'u',
+        'DEL': 's',
+        'S': 's',
+    };
+    /**
+     * 提取节点文本内容
+     * @param {Node} node - 要提取文本内容的节点
+     * @param {any} ctx - 上下文对象，用于递归调用时传递状态
+     * @returns {string[]} - 节点文本内容的数组
+     */
+    function extractNodeText(node, ctx = {}) {
+        let value = []; for (let index = 0, len = node.childNodes.length; index < len; index++) {
+            const i = node.childNodes[index];
+            if (i.nodeType === Node.TEXT_NODE) { // 文本节点
+                const text = i.textContent;
+                if (text.trim()) value.push(text);
+                continue;
+            }
+            if (i.nodeType !== Node.ELEMENT_NODE) continue; // 元素节点
+            const addLinebreak = i => (isBlockElement(i) && i.nextElementSibling && index < (len - 1)) && value.push('\n');
+            switch (i.tagName) {
+                case 'BR':
+                case 'HR':
+                    value.push('\n');
+                    break;
+                case 'RUBY':
+                    //{RUBY_B#rt内容}ruby内容{RUBY_E#}
+                    {
+                        const newCtx = context.structuredClone(ctx);
+                        // ruby是文本，rt是标注
+                        // 我们假设一个ruby只包含一个rb(ruby base)，并且不包含rtc和rbc
+                        newCtx.rtText = []; // 假设是规范的HTML，rt内容不会嵌套ruby
+                        const text = extractNodeText(i, newCtx).join('');
+                        value.push(`{RUBY_B#${newCtx.rtText.join('')}}${text}{RUBY_E#}`);
+                    }
+                    addLinebreak(i);
+                    break;
+                case 'RT':
+                    ctx.rtText.push(...extractNodeText(i, ctx));
+                    break;
+                case 'RP':
+                    break; //  <rp> 元素用于为那些不能使用 <ruby> 元素展示 ruby 注解的浏览器，提供随后的圆括号
+                case 'OL':
+                case 'UL':
+                    {
+                        const newCtx = context.structuredClone(ctx);
+                        newCtx.type = i.tagName; newCtx.index = 0;
+                        newCtx.indent = (ctx.indent != undefined) ? (ctx.indent + PG_DOWNLOAD_STRUCT.listIndentCount) : 0;
+                        value.push(...extractNodeText(i, newCtx));
+                    }
+                    addLinebreak(i);
+                    break;
+                case 'LI':
+                    if (ctx.indent) value.push(' '.repeat(ctx.indent));
+                    if (ctx.type === 'UL') value.push('· ', ...extractNodeText(i, ctx));
+                    else if (ctx.type === 'OL') value.push((++ctx.index) + '. ', ...extractNodeText(i, ctx));
+                    else value.push(...extractNodeText(i, ctx));
+                    addLinebreak(i);
+                    break;
+                case 'B':
+                case 'STRONG':
+                case 'I':
+                case 'U':
+                case 'DEL':
+                case 'S':
+                    const tag = extractNodeText_unityRichTextTagMap[i.tagName];
+                    value.push(`<${tag}>`);
+                    if (ctx.useColor) {
+                        const text = extractNodeText(i, ctx).join('');
+                        const colorProp = i.style.getPropertyValue('--color');
+                        value.push((colorProp && (!CONFIG.IGNORE_COLOR_CODE.includes(colorProp))) ? `<color=${colorProp}>${text}</color>` : text);
+                    }
+                    else value.push(...extractNodeText(i, ctx));
+                    value.push(`</${tag}>`);
+                    addLinebreak(i);
+                    break;
+                default:
+                    const text = extractNodeText(i, ctx).join('');
+                    if (text) {
+                        const colorProp = i.style.getPropertyValue('--color');
+                        value.push((colorProp && ctx.useColor && (!CONFIG.IGNORE_COLOR_CODE.includes(colorProp))) ? `<color=${colorProp}>${text}</color>` : text);
+                        addLinebreak(i);
+                    }
+            }
+        }
+        return value;
     }
 
     // 运行DOMPatch
@@ -1919,76 +2081,129 @@ details[open] > .dlg-help-summary::before {
         }
     }
 
-    /**
- * 提取节点文本内容
- * @param {Node} node - 要提取文本内容的节点
- * @param {any} ctx - 上下文对象，用于递归调用时传递状态
- * @returns {string[]} - 节点文本内容的数组
- */
-    function extractNodeText(node, ctx = {}) {
-        let value = []; for (let index = 0, len = node.childNodes.length; index < len; index++) {
-            const i = node.childNodes[index];
-            if (i.nodeType === Node.TEXT_NODE) { // 文本节点
-                const text = i.textContent;
-                if (text.trim()) value.push(text);
-                continue;
+    function FixLoadOrderProblem() {
+        /*
+        问题：在开放世界页面（如樱色轮回），偶发小概率的数据加载失败问题导致数据提取失败：
+
+        Uncaught (in promise) TypeError: Cannot convert undefined or null to object
+            at Object.keys (<anonymous>)
+            at ChapterStageInfo.getOWStoryData (common.187ecb61.js:11:4088)
+            at common.187ecb61.js:5:30199
+            at Array.forEach (<anonymous>)
+            at StoryTextReviewSection.doMakeOw (common.187ecb61.js:5:30142)
+            at Object.doMakeDomain (common.187ecb61.js:5:6877)
+            at StoryTextReviewSection.doMake (common.187ecb61.js:5:32367)
+            at common.187ecb61.js:1:25762
+            at util.43f2b9f8.js:1:8524
+            at r (util.43f2b9f8.js:1:27388)
+        getOWStoryData	@	common.187ecb61.js:11
+        （匿名）	@	common.187ecb61.js:5
+        doMakeOw	@	common.187ecb61.js:5
+        doMakeDomain	@	common.187ecb61.js:5
+        doMake	@	common.187ecb61.js:5
+        （匿名）	@	common.187ecb61.js:1
+        （匿名）	@	util.43f2b9f8.js:1
+        r	@	util.43f2b9f8.js:1
+        _requestData	@	util.43f2b9f8.js:1
+        await in _requestData		
+        requestData	@	util.43f2b9f8.js:1
+        （匿名）	@	util.43f2b9f8.js:1
+        requestMultiData	@	util.43f2b9f8.js:1
+        makeForAsyncData	@	util.43f2b9f8.js:1
+        staticMake	@	common.187ecb61.js:1
+        make	@	common.187ecb61.js:5
+        _make	@	common.187ecb61.js:1
+        make	@	common.187ecb61.js:1
+        make	@	common.187ecb61.js:1
+        （匿名）	@	2002.15f6f103.js:14
+        （匿名）	@	2002.15f6f103.js:14
+        PendingScript		
+        addScript	@	util.43f2b9f8.js:1
+        loadPage	@	util.43f2b9f8.js:1
+        （匿名）	@	common.html?id=2002:64
+
+        发生在
+        static getOWStoryData(e, t) {
+            ChapterPhaseGroup.OWStoryDataMap || (ChapterPhaseGroup.OWStoryDataMap = {},
+            Object.keys(e).forEach(t => { // e === undefined
+                e[t].forEach(t => {
+                    ChapterPhaseGroup.OWStoryDataMap[t.id] = t
+                }
+                )
             }
-            if (i.nodeType !== Node.ELEMENT_NODE) continue; // 元素节点
-            const addLinebreak = i => (isBlockElement(i) && i.nextElementSibling && index < (len - 1)) && value.push('\n');
-            switch (i.tagName) {
-                case 'BR':
-                case 'HR':
-                    value.push('\n');
-                    break;
-                case 'RUBY':
-                    //{RUBY_B#rt内容}ruby内容{RUBY_E#}
-                    {
-                        const newCtx = context.structuredClone(ctx);
-                        // ruby是文本，rt是标注
-                        // 我们假设一个ruby只包含一个rb(ruby base)，并且不包含rtc和rbc
-                        newCtx.rtText = []; // 假设是规范的HTML，rt内容不会嵌套ruby
-                        const text = extractNodeText(i, newCtx).join('');
-                        value.push(`{RUBY_B#${newCtx.rtText.join('')}}${text}{RUBY_E#}`);
+            ));
+            t = t.toFixed();
+            return ChapterPhaseGroup.OWStoryDataMap[t]
+        }
+        
+        这是因为
+            doMakeOw() {
+        if ("2003.5" === this.chapterId)
+            return this.doMakeMain();
+        var t = this.getIndexData();
+        if (!t)
+            return this.errorElement();
+        let s = DataUtil.getStore("OpenWorldStoryData") // 这里，错误地假设了OpenWorldStoryData一定可用
+          , o = new Map
+          , r = new Map
+          , l = "2002" === this.chapterId
+          , c = "2003" === this.chapterId
+          , h = "2004" === this.chapterId;
+        t.forEach( (t, e) => {
+            var a = t.id
+              , t = t.mission && ChapterStageInfo.getOWStoryData(s, t.mission)
+
+        而实际上调用这个函数的requestData，请求的是“DialogIndexOw”而不是“OpenWorldStoryData”
+        这就导致了OpenWorldStoryData为空，从而导致了页面加载失败
+
+        考虑到目标网站这架构实在过于……（我有点难评）
+        我也没有什么好的办法，只能这样hack一下……
+        */
+        const page = window.location.pathname, id = +(new URL(location.href).searchParams.get('id'));
+        if (page === '/pages/common.html' && !isNaN(id) && checkIdInRange(id, [[2001, 2004]])) {
+            // 开放世界章节
+            // 预定义一个ContentScriptEx到window上面，这是因为目标网站神奇的加载方式，这就允许我们接管页面加载过程：
+            // 
+            // let id = Util.getQueryString("id")
+            // if (id) {
+            //     try {
+            //         ContentScriptEx(id)
+            //     } catch (error) {
+            //         Util.loadPage(id)
+            //     }
+            // }
+            window.ContentScriptEx = function ContentScriptEx(id) {
+                // 先确保OpenWorldStoryData存在，使用目标网站的DataUtil
+                // 类型定义：DataUtil.requestData(e : string, t : 我也不知道是什么, a : 回调函数)
+                DataUtil.requestData("OpenWorldStoryData", null, new Proxy(function() {}, {
+                    apply: () => { // 防止hack被发现
+                        context.console.log("OpenWorldStoryData has been loaded");
+                        Util.loadPage(id);
                     }
-                    addLinebreak(i);
-                    break;
-                case 'RT':
-                    ctx.rtText.push(...extractNodeText(i, ctx));
-                    break;
-                case 'RP':
-                    break; //  <rp> 元素用于为那些不能使用 <ruby> 元素展示 ruby 注解的浏览器，提供随后的圆括号
-                case 'OL':
-                case 'UL':
-                    {
-                        const newCtx = context.structuredClone(ctx);
-                        newCtx.type = i.tagName; newCtx.index = 0;
-                        newCtx.indent = (ctx.indent != undefined) ? (ctx.indent + PG_DOWNLOAD_STRUCT.listIndentCount) : 0;
-                        value.push(...extractNodeText(i, newCtx));
-                    }
-                    addLinebreak(i);
-                    break;
-                case 'LI':
-                    if (ctx.indent) value.push(' '.repeat(ctx.indent));
-                    if (ctx.type === 'UL') value.push('· ', ...extractNodeText(i, ctx));
-                    else if (ctx.type === 'OL') value.push((++ctx.index) + '. ', ...extractNodeText(i, ctx));
-                    else value.push(...extractNodeText(i, ctx));
-                    addLinebreak(i);
-                    break;
-                default:
-                    const text = extractNodeText(i, ctx).join('');
-                    if (text) {
-                        const colorProp = i.style.getPropertyValue('--color');
-                        value.push((colorProp && ctx.useColor && (!CONFIG.IGNORE_COLOR_CODE.includes(colorProp))) ? `<color=${colorProp}>${text}</color>` : text);
-                        addLinebreak(i);
-                    }
+                }));
             }
         }
-        return value;
     }
 
     // ---------- //
 
     // Utils
+    
+    /**
+     * 创建一个延迟指定时间的 Promise
+     * @param {number} [time=0] - 延迟的时间（毫秒），默认为 0
+     * @returns {Promise<void>} 在指定时间后 resolve 的 Promise
+     */
+    function delay(time = 0) {
+        return new Promise(resolve => setTimeout(resolve, time));
+    }
+    
+    function nextAnimationFrame() {
+        return new Promise(resolve => requestAnimationFrame(resolve));
+    }
+    function nextIdleCallback() {
+        return new Promise(resolve => requestIdleCallback(resolve));
+    }
 
     /**
      * 替换类方法中的字符串
@@ -2066,23 +2281,17 @@ details[open] > .dlg-help-summary::before {
      * @param {string} selector 元素选择器
      * @param {number} timeout 超时时间，单位毫秒
      * @param {Document | Element} on 查找范围，默认是 document
+     * @param {string} method 查找方法，默认是 querySelector
      * @returns {Promise<Element>} 找到的元素
      */
-    function waitForElement(selector, timeout = 5000, on = document) {
+    async function waitForElement(selector, timeout = 5000, on = document, method = 'querySelector') {
         const startTime = Date.now();
-        return new Promise((resolve, reject) => {
-            function checkElement() {
-                const element = on.querySelector(selector);
-                if (element) {
-                    resolve(element);
-                } else if (Date.now() - startTime < timeout) {
-                    requestAnimationFrame(checkElement);
-                } else {
-                    reject(new Error("Element not found"));
-                }
-            }
-            requestAnimationFrame(checkElement);
-        });
+        while (Date.now() - startTime < timeout) {
+            await nextAnimationFrame();
+            const element = on[method](selector);
+            if (element) return element;
+        }
+        throw new Error("Element not found");
     }
 
     /**
@@ -2229,6 +2438,9 @@ details[open] > .dlg-help-summary::before {
     }
 
     class EmbeddedFrame {
+        /**
+         * @type {HTMLIFrameElement}
+         */
         #el = document.createElement('iframe');
 
         /**
@@ -2239,10 +2451,6 @@ details[open] > .dlg-help-summary::before {
             container.append(this.#el);
         }
 
-        /**
-         * 获取 iframe 元素
-         * @returns {HTMLIFrameElement} iframe 元素
-         */
         get element() {
             return this.#el;
         }
@@ -2285,7 +2493,7 @@ details[open] > .dlg-help-summary::before {
         load(url, expectLoadMessage = false, timeout = 10000) {
             const urlObj = new URL(url, window.location.href);
             const hashUrl = new URL(urlObj.hash.substring(1) || '/', urlObj.href);
-            const windowId = crypto.randomUUID();
+            const windowId = context.crypto.randomUUID();
             hashUrl.searchParams.set('__windowId', windowId);
             urlObj.hash = '#' + hashUrl.pathname + hashUrl.search;
             this.#el.src = urlObj.href;
@@ -2323,14 +2531,12 @@ details[open] > .dlg-help-summary::before {
         }
         /**
          * 获取 iframe 的 contentWindow
-         * @returns {Window} iframe 的 contentWindow
          */
         get contentWindow() {
             return this.#el.contentWindow;
         }
         /**
          * 获取 iframe 的 contentDocument
-         * @returns {Document} iframe 的 contentDocument
          */
         get contentDocument() {
             return this.#el.contentDocument;
@@ -2340,9 +2546,10 @@ details[open] > .dlg-help-summary::before {
          * 向 iframe 发送消息
          * @param {*} data - 要发送的数据
          * @param {string} targetOrigin - 目标源，默认为 '*'
+         * @param {Transferable[]} transfer - 可选的可传输对象数组
          */
-        postMessage(data, targetOrigin = '*') {
-            this.#el.contentWindow.postMessage(data, targetOrigin);
+        postMessage(data, targetOrigin = '*', transfer = undefined) {
+            this.#el.contentWindow.postMessage(data, targetOrigin, transfer);
         }
 
         /**
@@ -2356,12 +2563,60 @@ details[open] > .dlg-help-summary::before {
         invoke(action, data, timeout = 10000) { 
             return new Promise((resolve, reject) => {
                 if (timeout) setTimeout(() => reject(new Error('Timeout')), timeout);
-                const nonce = crypto.randomUUID();
+                const nonce = context.crypto.randomUUID();
                 MessageHandler.registerResolver(nonce, resolve, timeout);
                 const req = Object.assign({ rpc_action: action, rpc_invoke_nonce: nonce, password: state.rpc_password }, data || {});
                 this.postMessage(req, window.location.origin);
             });
         }
+    }
+    
+    /**
+     * 将文件数据压缩为 ZIP 格式，基于 fflate 实现回调转 Promise 封装
+     * @param {Object} files - 待压缩的文件/文件夹结构对象
+     * @param {Uint8Array} files[key] - 文件路径作为 key，对应值为 UTF-8 编码的 Uint8Array 数据；
+     * @param {Object} [options={}] - fflate 压缩配置选项
+     * @param {number} [options.level=6] - 压缩级别，取值 0-9，0 为无压缩，9 为最高压缩（速度最慢）
+     * @param {number} [options.mem] - 压缩内存占用级别，影响压缩速度与内存消耗，取值建议参考 fflate 官方文档
+     * @returns {Promise<Uint8Array<ArrayBuffer>>} 成功返回压缩后的 ZIP 数据 Uint8Array，失败则 reject 抛出错误
+     */
+    function createZip(files, options = {}) {
+        return new Promise((resolve, reject) => fflate.zip(files, options, (err, out) => err ? reject(err) : resolve(out)));
+    }
+
+    /**
+     * 获取元素的所有符合选择器的父元素
+     * @param {Element} element - 起始元素
+     * @param {string} [selector=null] - 可选的选择器，用于筛选父元素
+     * @returns {Element[]} 符合选择器的父元素数组
+     */
+    function parents(element, selector = null) {
+        const parents = [];
+        let current = element.parentElement;
+
+        while (current) {
+            if (!selector || current.matches(selector)) {
+                parents.push(current);
+            }
+            current = current.parentElement;
+        }
+
+        return parents;
+    }
+
+    /**
+     * 检查 ID 是否在指定的范围列表内
+     * @param {number} id - 要检查的 ID
+     * @param {Array<number|Array<number>>} ranges - 范围列表，每个元素可以是单个数字或数字范围数组
+     * @returns {boolean} 如果 ID 在范围内返回 true，否则返回 false
+     */
+    function checkIdInRange(id, ranges) {
+        for (const range of ranges) {
+            if (Array.isArray(range)) {
+                if (id >= range[0] && id <= range[1]) return true;
+            } else if (id === range) return true;
+        }
+        return false;
     }
 
 })((typeof unsafeWindow !== "undefined" ? unsafeWindow : window), window))
