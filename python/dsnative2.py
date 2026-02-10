@@ -111,6 +111,7 @@ def clear_reasoning_content(messages):
         if isinstance(m, dict) and "reasoning_content" in m:
             m["reasoning_content"] = None
 
+cd_err_cnt = 0
 def handle_cd_command(command, cwd, virtual_root):
     """
     PoC 版 cd 解析：
@@ -118,6 +119,7 @@ def handle_cd_command(command, cwd, virtual_root):
     - 只处理 cd <path>
     - 忽略 && 及之后的所有内容
     """
+    global cd_err_cnt
     try:
         tokens = shlex.split(command, posix=not IS_WINDOWS)
     except Exception as e:
@@ -140,9 +142,12 @@ def handle_cd_command(command, cwd, virtual_root):
     if not is_within_root(target_path, virtual_root):
         return cwd, f"<cd denied: {target_path} outside virtual root {virtual_root}>"
 
+    if len(tokens) > 2:
+        cd_err_cnt += 1
+        if cd_err_cnt >= 3:
+            raise Exception(f"FATAL: Agent access violation:: Due to security reason, cd command can only be invoked separately. The request has been blocked and the conversation has been interrupted due to {cd_err_cnt} violations.")
+        return Path.cwd(), f"FATAL: Due to security reason, cd command can only be invoked separately. The request has been blocked."
     try:
-        if len(tokens) > 2:
-            return Path.cwd(), f"FATAL: Due to security reason, cd command can only be invoked separately. The request has been blocked."
         os.chdir(target_path)
         new_cwd = Path.cwd()
 
@@ -355,8 +360,8 @@ def repl():
                     messages = loaded
                     # rebuild system prompt to reflect current virtual_root
                     messages.insert(0, build_system_message(str(virtual_root)))
-                    clear_reasoning_content(messages)
-                    print(f"已从 {filename} 加载会话（并清除 reasoning_content）")
+                    # clear_reasoning_content(messages)
+                    print(f"已从 {filename} 加载会话")
                 else:
                     print("文件格式无法识别（预期 JSON 数组）。")
                 continue
@@ -488,55 +493,60 @@ def repl():
                 break
             
             # ---- process each tool call ----
+            has_excep = False
             for tool in tool_calls:
-                func_name = tool.get("function", {}).get("name")
-                args_raw = tool.get("function", {}).get("arguments", "{}")
-        
                 try:
-                    args = json.loads(args_raw)
-                except Exception:
-                    args = {"command": args_raw}
-        
-                command = args.get("command", "")
-        
-                print(f"{C.YELLOW}\n模型请求执行命令 (tool={func_name}):\n>>> {command}{C.RESET}\n")
-                stripped = command.strip()
-                # if stripped.startswith("cd ") or stripped == "cd":
-                    # yn = 'y'
-                    # print("自动执行cd命令。")
-                # else:
-                if True:
-                    yn = input("是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果) ").strip()
-                if yn.lower() not in ("y", "n", "s"):
-                    print("将把自定义消息传递给模型。")
-        
-                if yn.lower() == "n":
-                    result_str = "<user rejected execution>"
-                    print("已拒绝执行。将返回拒绝结果给模型。")
-        
-                elif yn.lower() == "s":
-                    result_str = "<skipped by user>"
-                    print("已跳过（返回跳过标记）")
-        
-                elif yn.lower() == "y":
-                    if stripped.startswith("cd ") or stripped == "cd":
-                        cwd, result_str = handle_cd_command(command, cwd, virtual_root)
-                        print(f"{C.DIM}{result_str}{C.RESET}")
+                    func_name = tool.get("function", {}).get("name")
+                    args_raw = tool.get("function", {}).get("arguments", "{}")
+            
+                    try:
+                        args = json.loads(args_raw)
+                    except Exception:
+                        args = {"command": args_raw}
+            
+                    command = args.get("command", "")
+            
+                    print(f"{C.YELLOW}\n模型请求执行命令 (tool={func_name}):\n>>> {command}{C.RESET}\n")
+                    stripped = command.strip()
+                    # if stripped.startswith("cd ") or stripped == "cd":
+                        # yn = 'y'
+                        # print("自动执行cd命令。")
+                    # else:
+                    if True:
+                        yn = input("是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果) ").strip()
+                    if yn.lower() not in ("y", "n", "s"):
+                        print("将把自定义消息传递给模型。")
+            
+                    if yn.lower() == "n":
+                        result_str = "<user rejected execution>"
+                        print("已拒绝执行。将返回拒绝结果给模型。")
+            
+                    elif yn.lower() == "s":
+                        result_str = "<skipped by user>"
+                        print("已跳过（返回跳过标记）")
+            
+                    elif yn.lower() == "y":
+                        if stripped.startswith("cd ") or stripped == "cd":
+                            cwd, result_str = handle_cd_command(command, cwd, virtual_root)
+                            print(f"{C.DIM}{result_str}{C.RESET}")
+                        else:
+                            try:
+                                result_str = execute_subprocess(command, cwd)
+                            except Exception as e:
+                                result_str = f"<exec failed: {e}>"
+            
+                            MAX_CHARS = 20000
+                            if len(result_str) > MAX_CHARS:
+                                result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
+            
+                            print(f"{C.DIM}命令执行返回（前2000字符）:\n{result_str[:2000]}{C.RESET}\n")
+                            
                     else:
-                        try:
-                            result_str = execute_subprocess(command, cwd)
-                        except Exception as e:
-                            result_str = f"<exec failed: {e}>"
-        
-                        MAX_CHARS = 20000
-                        if len(result_str) > MAX_CHARS:
-                            result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
-        
-                        print(f"{C.DIM}命令执行返回（前2000字符）:\n{result_str[:2000]}{C.RESET}\n")
-                        
-                else:
-                    result_str = f"<user rejected execution and replied>\n{yn}"
-        
+                        result_str = f"<user rejected execution and replied>\n{yn}"
+                except Exception as e:
+                    has_excep = True
+                    result_str = f"Unexpected exception during executing command: {e}"
+                    print(result_str)
                 # 把工具执行结果回传给模型
                 messages.append({
                     "role": "tool",
@@ -544,6 +554,8 @@ def repl():
                     "content": result_str,
                 })
         
+            if has_excep:
+                break
             sub_turn += 1
         # 清理推理内容
         #for msg in messages:
