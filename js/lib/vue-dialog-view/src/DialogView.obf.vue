@@ -4,6 +4,7 @@
     class="_b4102a3b79656a37"
     v-bind="$attrs"
     @close="handleDialogClose"
+    :closedBy="closedBy"
   >
     <div v-if="showTitleBar" class="_4d394b1507fdc584">
       <span class="_088d860d2fd75292">
@@ -29,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick, onMounted } from 'vue'
+import { ref, watch, computed, nextTick, onMounted } from 'vue'
 
 interface Props {
   modelValue: boolean
@@ -68,7 +69,7 @@ const handleDialogClose = (): void => {
         if (dialogRef.value && !dialogRef.value.open) {
           dialogRef.value.showModal()
         }
-      }) // Avoid using 'cancel' event because some browsers handle it incorrectly
+      }) // Avoid using 'cancel' event because some browsers handle it incorrectly, see https://issues.chromium.org/issues/41491338
       return;
     }
   }
@@ -77,6 +78,8 @@ const handleDialogClose = (): void => {
   }
   emit('closed')
 }
+
+const closedBy = computed(() => props.closable ? 'any' : 'none') // see https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/closedBy
 
 watch(() => props.modelValue, async (newValue: boolean) => {
   await nextTick()
