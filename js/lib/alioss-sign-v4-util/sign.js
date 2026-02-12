@@ -1,4 +1,5 @@
-import CryptoJS from 'crypto-js';
+import { hexlify } from './binascii.js';
+import { hmacsha256, sha256 } from './crypto.js';
 
 export function ISO8601(date) { // e.g.20250201T053008Z
     if (!date) date = new Date(); // now
@@ -66,10 +67,6 @@ function getCanonicalQueryString(url = new URL()) {
         .join('&');
     return canonicalQueryString;
 }
-// 定义 HMAC-SHA256 辅助函数
-function hmacsha256(key, message) {
-    return CryptoJS.HmacSHA256(message, key);
-}
 // https://help.aliyun.com/zh/oss/developer-reference/add-signatures-to-urls
 // 需要先对 URL 进行以下处理
 // (encodeURIComponent(url).replace(/\%2F/ig, '/'))
@@ -128,11 +125,12 @@ UNSIGNED-PAYLOAD`;
     const StringToSign = `OSS4-HMAC-SHA256
 ${date}
 ${derivedRegionKeyParams}
-${CryptoJS.SHA256(CanonicalRequest).toString(CryptoJS.enc.Hex)}`;
-    const SigningKey = hmacsha256(hmacsha256(hmacsha256(hmacsha256(CryptoJS.enc.Utf8.parse("aliyun_v4" + secret), date.substring(0, 8)), region), 'oss'), 'aliyun_v4_request');
-    const signature = hmacsha256(SigningKey, StringToSign);
+${await sha256(CanonicalRequest)}`;
+    const SigningKey = await hmacsha256(await hmacsha256(await hmacsha256(await hmacsha256(
+        "aliyun_v4" + secret, date.substring(0, 8)), region), 'oss'), 'aliyun_v4_request');
+    const signature = await hmacsha256(SigningKey, StringToSign);
     //--
-    url.searchParams.set('x-oss-signature', signature);
+    url.searchParams.set('x-oss-signature', hexlify(signature));
     //--
     return url.href;
 }
@@ -186,11 +184,12 @@ UNSIGNED-PAYLOAD`;
     const StringToSign = `OSS4-HMAC-SHA256
 ${date}
 ${derivedRegionKeyParams}
-${CryptoJS.SHA256(CanonicalRequest).toString(CryptoJS.enc.Hex)}`;
-    const SigningKey = hmacsha256(hmacsha256(hmacsha256(hmacsha256(CryptoJS.enc.Utf8.parse("aliyun_v4" + secret), date.substring(0, 8)), region), 'oss'), 'aliyun_v4_request');
-    const signature = hmacsha256(SigningKey, StringToSign);
+${await sha256(CanonicalRequest)}`;
+    const SigningKey = await hmacsha256(await hmacsha256(await hmacsha256(await hmacsha256(
+        "aliyun_v4" + secret, date.substring(0, 8)), region), 'oss'), 'aliyun_v4_request');
+    const signature = await hmacsha256(SigningKey, StringToSign);
     //--
-    result += `,Signature=${signature}`;
+    result += `,Signature=${hexlify(signature)}`;
     //--
     return result;
 }

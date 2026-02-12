@@ -74,7 +74,4 @@ declare module 'alioss-sign-v4-util' {
             date?: Date;
         }
     ): Promise<string>;
-
-// HMAC-SHA256 内部实现 (不需要导出)
-// function hmacsha256(key: any, message: string): any;
-  }
+}

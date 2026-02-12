@@ -1,11 +1,13 @@
 {
   "name": "alioss-sign-v4-util",
-  "version": "1.1.0",
-  "description": "Sign url or header for AliYun OSS (V4)",
+  "version": "2.0.2",
+  "description": "Sign url or header for AliYun OSS (V4) using Web Crypto API",
   "main": "sign.js",
   "type": "module",
   "files": [
     "sign.js",
+    "crypto.js",
+    "binascii.js",
     "LICENSE",
     "README.md",
     "sign.d.ts"
@@ -26,8 +28,5 @@
   "bugs": {
     "url": "https://github.com/shc0743/MyUtility/issues"
   },
-  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/alioss-sign-v4-util/#readme",
-  "dependencies": {
-    "crypto-js": "^4.2.0"
-  }
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/alioss-sign-v4-util/#readme"
 }
