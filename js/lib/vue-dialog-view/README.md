@@ -8,15 +8,13 @@ A modern Vue 3 dialog component using the native HTML5 `<dialog>` element.
 
 * 🎯 **Native HTML5 Dialog** - Uses the built-in `<dialog>` element for better accessibility and performance
 * 🎨 **Customizable** - Configurable title bar and close button
+* 🖱️ **Click-to-close** - Optional backdrop click to close (using native closedby attribute)
 * ♿ **Accessible** - Proper ARIA labels and keyboard support
 * 📱 **Responsive** - Adapts to different screen sizes
 * 🎪 **Slot Support** - Flexible content slots for title, footer and main content
 * 🎭 **Vue 3 Ready** - Built with Composition API and TypeScript
 * 📦 **Multiple Distributions** - Choose between obfuscated / unobfuscated builds
-* 🎨 **Flexible CSS Strategy**
-
-  * Automatic CSS injection (zero setup)
-  * Or fully manual CSS loading
+* 🎨 **Flexible CSS Strategy** - Automatic CSS injection (zero setup) or fully manual CSS loading
 * 🧩 **Tree-shake Friendly** - ESM and UMD builds available
 
 ---
@@ -168,12 +166,13 @@ These variables work consistently across all build variants.
 
 ## 🧩 Props
 
-| Prop              | Type      | Default      | Description                           |
-| ----------------- | --------- | ------------ | ------------------------------------- |
-| `modelValue`      | `boolean` | **required** | Controls dialog visibility            |
-| `showTitleBar`    | `boolean` | `true`       | Show or hide title bar                |
-| `showCloseButton` | `boolean` | `true`       | Show close button                     |
-| `closable`        | `boolean` | `true`       | Whether the user can close the dialog |
+| Prop               | Type      | Default      | Description                                 |
+| ------------------ | --------- | ------------ | ------------------------------------------- |
+| `modelValue`       | `boolean` | **required** | Controls dialog visibility                  |
+| `showTitleBar`     | `boolean` | `true`       | Show or hide title bar                      |
+| `showCloseButton`  | `boolean` | `true`       | Show close button                           |
+| `closable`         | `boolean` | `true`       | Whether the user can close the dialog       |
+| `closeOnClickMask` | `boolean` | `false`      | Whether clicking backdrop closes the dialog |
 
 ---
 

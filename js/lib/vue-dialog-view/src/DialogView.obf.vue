@@ -37,12 +37,14 @@ interface Props {
   showTitleBar?: boolean
   showCloseButton?: boolean
   closable?: boolean
+  closeOnClickMask?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   showTitleBar: true,
   showCloseButton: true,
   closable: true,
+  closeOnClickMask: false,
 })
 
 const emit = defineEmits<{
@@ -79,7 +81,7 @@ const handleDialogClose = (): void => {
   emit('closed')
 }
 
-const closedBy = computed(() => props.closable ? 'any' : 'none') // see https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/closedBy
+const closedBy = computed(() => props.closable ? (props.closeOnClickMask ? 'any' : 'closerequest') : 'none') // see https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/closedBy
 
 watch(() => props.modelValue, async (newValue: boolean) => {
   await nextTick()

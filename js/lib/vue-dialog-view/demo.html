@@ -45,32 +45,11 @@
 
     <script type="module">
 import { createApp, ref, h } from 'vue'
-import { DialogView } from 'vue-dialog-view'
-//import DialogView from 'vue-dialog-view' if you want to register the component globally
+////import { DialogView } from 'vue-dialog-view'
+//////import DialogView from 'vue-dialog-view' if you want to register the component globally
+const { DialogView } = await (import('./dist/dialog-view.es.js').catch(() => import('https://cdn.jsdelivr.net/npm/vue-dialog-view@latest/dist/dialog-view.es.js')))
 
-const text = `
-When good old friends are going away
-Will you wish them to remember your name?
-When good old days are passing away
-Will you promise your heart remains the same
-Never can we suspend the time
-Having to leave the tracks behind
-there is a longer way ahead, After all.
-There used to be a story teller
-who always painted the sunshine and the rain
-One has to eventually grow up
-Spending a lifetime to taste the love and pain
-Never can we suspend the time
-Having to leave the tracks behind
-there is a longer way ahead, After all.
-If it’s too hard to say goodbye
-Give us a try to sing a rhyme
-“May you, the beauty of this world, always shine.”
-
----
-
-The text/content/images referenced herein are from miHoYo and are used for reference purposes only. All rights belong to the original copyright holder.
-`
+const text = 'The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog. The quick brown fox jumps over the lazy dog.\n'.repeat(30)
 
 const App = {
   setup() {
@@ -78,6 +57,7 @@ const App = {
     const showTitleBar = ref(true)
     const showCloseButton = ref(true)
     const closable = ref(true)
+    const closeOnClickMask = ref(false)
     const closed = ref(false)
     
     const closeDialog = () => {
@@ -118,7 +98,16 @@ const App = {
                   onChange: (e) => { closable.value = e.target.checked }
                 }),
                 '允许用户关闭 (closable)'
-              ])
+              ]),
+              
+              h('label', { style: 'display: flex; align-items: center; gap: 8px;' }, [
+                h('input', {
+                  type: 'checkbox',
+                  checked: closeOnClickMask.value,
+                  onChange: (e) => { closeOnClickMask.value = e.target.checked }
+                }),
+                '点击遮罩关闭 (closeOnClickMask)'
+              ]),
             ]),
             
             // 操作按钮
@@ -140,7 +129,8 @@ const App = {
             h('div', `对话框状态: ${show.value ? '打开' : '关闭'}`),
             h('div', `showTitleBar: ${showTitleBar.value}`),
             h('div', `showCloseButton: ${showCloseButton.value}`),
-            h('div', `closable: ${closable.value}`)
+            h('div', `closable: ${closable.value}`),
+            h('div', `closeOnClickMask: ${closeOnClickMask.value}`),
           ])
         ]),
         
@@ -160,7 +150,8 @@ const App = {
             },
             showTitleBar: showTitleBar.value,
             showCloseButton: showCloseButton.value,
-            closable: closable.value
+            closable: closable.value,
+            closeOnClickMask: closeOnClickMask.value,
           },
           {
             title: () => h('div', [
@@ -180,11 +171,11 @@ const App = {
               h('p', [
                 '测试行为: ',
                 closable.value 
-                  ? '你可以点击右上角关闭按钮或按 Esc 来关闭。'
-                  : h('span', { style: 'color: #dc3545;' }, '对话框已被锁定，无法通过常规方式关闭！')
+                  ? (closeOnClickMask.value ? "你可以点击右上角关闭按钮、按 Esc 或点击遮罩关闭。" : "你可以点击右上角关闭按钮或按 Esc 来关闭。")
+                  : h("span", { style: "color: #dc3545;" }, "对话框已被锁定，无法通过常规方式关闭！")
               ]),
               h('br'),
-              h('pre', { style: 'white-space: pre-wrap; background: #f8f9fa; padding: 10px; border-radius: 4px;' }, 
+              h('pre', { style: 'white-space: pre; background: #f8f9fa; padding: 10px; border-radius: 4px;' }, 
                 text
               ),
             ],

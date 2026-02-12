@@ -3,6 +3,7 @@ interface Props {
     showTitleBar?: boolean;
     showCloseButton?: boolean;
     closable?: boolean;
+    closeOnClickMask?: boolean;
 }
 declare function __VLS_template(): {
     attrs: Partial<{}>;
@@ -30,6 +31,7 @@ declare const __VLS_component: import('vue').DefineComponent<Props, {
     showTitleBar: boolean;
     showCloseButton: boolean;
     closable: boolean;
+    closeOnClickMask: boolean;
 }, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {
     dialogRef: HTMLDialogElement;
 }, HTMLDialogElement>;
