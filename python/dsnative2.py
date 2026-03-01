@@ -221,12 +221,14 @@ def is_within_root(target_path, root_path):
     except Exception:
         return False
 
+current_truncate_val = 10000
 def execute_subprocess(command, cwd):
     """
     Execute the command in a subprocess, capture stdout/stderr.
     - On Unix we will use bash -lc to allow typical shell syntax.
     - On Windows we let subprocess use shell=True (cmd.exe).
     """
+    global current_truncate_val
     try:
         if IS_WINDOWS:
             # Windows: shell via cmd.exe
@@ -245,8 +247,8 @@ def execute_subprocess(command, cwd):
         combined = combined.strip()
         if combined == "":
             combined = f"<no output> (returncode={rc})"
-        if len(combined) > 10000:
-            combined = combined[:10000] + f"[[TRUNCATED {len(combined) - 10000} chars]]"
+        if len(combined) > current_truncate_val:
+            combined = combined[:current_truncate_val] + f"[[TRUNCATED {len(combined) - current_truncate_val} chars]]"
         return f"Return code: {rc}\n{combined}"
     except Exception as e:
         return f"Error occurred while executing command: {e}"
@@ -271,6 +273,7 @@ def repl():
     start_dir = Path.cwd().resolve()
     virtual_root = start_dir  # initial virtual root is current working directory
     cwd = start_dir
+    global current_truncate_val
 
     print("DeepSeek Agent REPL (PoC).")
     print(f"Working dir: {cwd}")
@@ -513,8 +516,8 @@ def repl():
                         # print("自动执行cd命令。")
                     # else:
                     if True:
-                        yn = input("是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果) ").strip()
-                    if yn.lower() not in ("y", "n", "s"):
+                        yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行，当前截断大小：{current_truncate_val}) ").strip()
+                    if yn.lower() not in ("y", "n", "s", "t"):
                         print("将把自定义消息传递给模型。")
             
                     if yn.lower() == "n":
@@ -525,21 +528,23 @@ def repl():
                         result_str = "<skipped by user>"
                         print("已跳过（返回跳过标记）")
             
-                    elif yn.lower() == "y":
+                    elif yn.lower() == "y" or yn.lower() == "t":
                         if stripped.startswith("cd ") or stripped == "cd":
                             cwd, result_str = handle_cd_command(command, cwd, virtual_root)
                             print(f"{C.DIM}{result_str}{C.RESET}")
                         else:
                             try:
+                                if yn.lower() == "t":
+                                    current_truncate_val = int(input("请输入新的截断大小（务必需要是数字）: "))
                                 result_str = execute_subprocess(command, cwd)
                             except Exception as e:
                                 result_str = f"<exec failed: {e}>"
             
-                            MAX_CHARS = 20000
+                            MAX_CHARS = 200000
                             if len(result_str) > MAX_CHARS:
                                 result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
             
-                            print(f"{C.DIM}命令执行返回（前2000字符）:\n{result_str[:2000]}{C.RESET}\n")
+                            print(f"{C.DIM}命令执行返回（前10000字符）:\n{result_str[:10000]}{C.RESET}\n")
                             
                     else:
                         result_str = f"<user rejected execution and replied>\n{yn}"
