@@ -49,8 +49,10 @@ def read_api_key():
     # fallback
     envk = os.environ.get("DEEPSEEK_API_KEY") or os.environ.get("DEEPSEEK_KEY")
     if envk:
+        os.environ.pop('DEEPSEEK_API_KEY', None)
+        os.environ.pop('DEEPSEEK_KEY', None)
         return envk.strip()
-    print("错误：未找到 API Key。请把 Key 放在 ./skapikey.txt 或设置 DEEPSEEK_API_KEY 环境变量。")
+    print("错误：未找到 API Key。请把 Key 放在 $API_KEY_PATH/skapikey.txt 或设置 DEEPSEEK_API_KEY 环境变量。")
     sys.exit(1)
 
 API_KEY = read_api_key()
