@@ -11,6 +11,7 @@ Features:
 """
 import os
 import sys
+import time
 import json
 import shlex
 import subprocess
@@ -30,7 +31,8 @@ except Exception:
 BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")  # 可按需修改
 API_KEY_PATH = Path(os.environ.get("API_KEY_PATH", "/data/data/com.termux/files/home/skapikey.txt"))
 DEFAULT_MODEL = "deepseek-reasoner"  # 替换为你要用的模型标识
-TIMEOUT = 60
+TIMEOUT = 600
+TIMING_ENABLED = True
 
 class C:
     RESET = "\033[0m"
@@ -251,12 +253,14 @@ def execute_subprocess(command, cwd):
     """
     global current_truncate_val
     try:
+        timingapidata = ""
+        startTime = time.time()
         if IS_WINDOWS:
             # Windows: shell via cmd.exe
-            proc = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=str(cwd))
+            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=str(cwd))
         else:
             # Unix: use bash -lc for better POSIX compatibility
-            proc = subprocess.run(command, shell=True, capture_output=True, text=True, cwd=str(cwd), executable="/bin/bash")
+            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=str(cwd), executable="/bin/bash")
         out = proc.stdout or ""
         err = proc.stderr or ""
         rc = proc.returncode
@@ -270,7 +274,16 @@ def execute_subprocess(command, cwd):
             combined = f"<no output> (returncode={rc})"
         if len(combined) > current_truncate_val:
             combined = combined[:current_truncate_val] + f"[[TRUNCATED {len(combined) - current_truncate_val} chars]]"
-        return f"Return code: {rc}\n{combined}"
+        if TIMING_ENABLED:
+            timedata = {
+                "elapsed": int(1000 * (time.time() - startTime)) / 1000,
+                "current": {
+                    "ts": int(time.time()),
+                    "iso": datetime.now().isoformat()
+                }
+            }
+            timingapidata = f"\nClient timing info: {json.dumps(timedata)}\n"
+        return f"Return code: {rc}{timingapidata}\n{combined}"
     except Exception as e:
         return f"Error occurred while executing command: {e}"
 
@@ -279,13 +292,27 @@ def build_system_message(root_dir):
     return {
         "role": "system",
         "content": (
-            "You are an assistant that can request execution of shell commands via a tool call named "
-            "\"execute_command\". Only request the tool when you *need* to run commands. "
-            f"The user's OS: {OS_INFO}. The shell available is '{SHELL_TYPE}'.\n\n"
-            "Important: The client's agent "
+            "## System environment"
+            "\nYou are an assistant that can request execution of shell commands via a tool call named \"execute_command\". Only request the tool when you *need* to run commands. "
+            f"\nThe user's OS: {OS_INFO}. The shell available is '{SHELL_TYPE}'."
+            "\nImportant: The client's agent "
             "enforces a virtual root (sandbox) and will deny cd outside that root. The agent will **ALWAYS** ask "
             "the human user for confirmation before executing any requested command. If you want to provide "
-            "multi-step plans, consider describing them first. If you wants to change directory to complete a task, **ALWAYS** consider 'change_dir' tool first. Use 'cd foo && command' syntax **ONLY when the command is very simple**."
+            "multi-step plans, consider describing them first.\nIf you wants to change directory to complete a task, **ALWAYS** consider 'change_dir' tool first. Use 'cd foo && command' syntax **ONLY when the command is very simple**."
+            "\n\n## Command execution rule"
+            "\n- **Do one thing at one time**. Every command will be reviewed by user before being executed. Avoid combining **complex** commands."
+            "\n- **Merge on demand**. Shell provides syntax to run multiple command at one time, such as '&&' '||' and ';'. Though it is required to split complex commands, merging some simple commands is allowed. For example, you shouldn't run \"cd foo && curl -o xxxx && sh -c xxx\" at one time; running \"cd bar && npm install && npm run build\" is allowed."
+            "\n- **Avoid unnecessary split**. It is obvious that every tool calls creates a new execution context and a new API call, so you shouldn't split simple commands. For example, 'pwd && ls' **should** be executed together. If you split them into two tool calls, not only it's unnecessary but also it increases the response time. So don't split simple commands like this."
+            "\n- **Know the environment**. The command is executed in a subshell; every request is standalone. This means that environment variables and current directory will not be persisted (for current directory, use 'change_dir' to persist change). The agent captures stdout and stderr. If you directly write to /dev/tty or anything like this, output will not be recorded. Output is also visible to the user (after the command finishes)."
+            "\n- **Know the shell**. The sub shell is **NOT** interactive. If a subprocess wants user input, it will stuck the client. So do not run interactive commands or programs. Besides, the conversation will NOT continue until the command finishes."
+            "\n- **Manage the context wisely**. The context window will not be cleared in the current wrapper script, meaning that you should manage the context wisely. Put it into practice, you should ensure that the command output is not too long. The client also truncate any output that is longer than a specified value. If there is a genuine need to read long texts, fot example, when the user asks you to analyze novels, consider ask the user to expand the auto-truncate threshold."
+            "\n\n## Change current directory rule"
+            "\n- **Use when necessary**. If you just want to check directory content, use 'cd xxx && ls' or simply use 'ls xxx' is a better choice. However, if it is required to finish complex task, e.g. search text, edit file, etc, use 'change_dir' instead of 'cd dir && command'."
+            "\n- **Never do useless things**. When changing directory, never split a simple operation. For example, if you want to change dir to '../foo/bar', do not call 'change_dir(..)', 'change_dir(foo)', then 'change_dir(bar)'. One call is enough: 'change_dir(../foo/bar)'."
+            "\n\nCommunication and interact rule"
+            "\n- **Respect user privacy**. If the user does not want you to view or check something, respect user's choice. Do not try to use non-standard methods to avoid the limitation."
+            "\n- **Honestly explain your limitations**. If the user expressed intention, wanting you to check what is outside the virtual filesystem, explain that you can't do it and recommend the user to start a new conversation in that directory. Do not try to avoid system limitations."
+            "\n- **Do what you can**. If the user wants to complete a very difficult task or a task that couldn't be completed in the current environment, explain your capabilities and limitations and tell the user the current situation and why you couldn't finish the task. Never stick on a difficult problem for a long time."
         )
     }
 
