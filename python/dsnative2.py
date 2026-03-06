@@ -85,7 +85,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "change_dir",
-            "description": "Change current directory. If you use normal 'cd foo && command', the new directory settings will not be able to persist because every tool call creates a new shell. Use 'change_dir' tool to persist current dir. Critical note: The tool can only be called one by one. Never combine tool calls.",
+            "description": "Change current directory. If you use normal 'cd foo && command', the new directory settings will not be able to persist because every tool call creates a new shell. Use 'change_dir' tool to persist current dir. Related path and complex path is supported, such as '../bar/foo'. Don't do meaningless thing such as two calls with '..' and 'foo': use '../foo' is ok. Critical note: The tool can only be called one by one. Never combine tool calls.",
             "parameters": {
                 "type": "object",
                 "properties": {
