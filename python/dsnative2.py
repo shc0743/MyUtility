@@ -283,6 +283,8 @@ def execute_subprocess(command, cwd):
                 }
             }
             timingapidata = f"\nClient timing info: {json.dumps(timedata)}\n"
+        if API_KEY in combined:
+            combined = combined.replace(API_KEY, '<Sensitive API Key Detected>')
         return f"Return code: {rc}{timingapidata}\n{combined}"
     except Exception as e:
         return f"Error occurred while executing command: {e}"
