@@ -74,10 +74,27 @@ TOOLS = [
                 "properties": {
                     "command": {
                         "type": "string",
-                        "description": "The shell command to run, e.g. 'ls -la' or 'cd /path'."
+                        "description": "The shell command to run, e.g. 'ls -la'."
                     }
                 },
                 "required": ["command"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "change_dir",
+            "description": "Change current directory. If you use normal 'cd foo && command', the new directory settings will not be able to persist because every tool call creates a new shell. Use 'change_dir' tool to persist current dir. Critical note: The tool can only be called one by one. Never combine tool calls.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The new current dir."
+                    }
+                },
+                "required": ["path"]
             }
         }
     }
@@ -122,16 +139,18 @@ def handle_cd_command(command, cwd, virtual_root):
     - 忽略 && 及之后的所有内容
     """
     global cd_err_cnt
-    try:
-        tokens = shlex.split(command, posix=not IS_WINDOWS)
-    except Exception as e:
-        return cwd, f"<cd parse error: {e}>"
+    # try:
+        # tokens = shlex.split(command, posix=not IS_WINDOWS)
+    # except Exception as e:
+        # return cwd, f"<cd parse error: {e}>"
 
-    if not tokens or tokens[0] != "cd":
-        return cwd, "<not a cd command>"
+    # if not tokens or tokens[0] != "cd":
+        # return cwd, "<not a cd command>"
 
     # tokens: ["cd", "path", "&&", "something"...]
-    target = tokens[1] if len(tokens) >= 2 else os.path.expanduser("~")
+    # Update: due to the new tool, AI will specify the path directly
+    # target = tokens[0] if len(tokens) >= 1 else os.path.expanduser("~")
+    target = command
 
     # 构造目标路径
     target_path = Path(target)
@@ -144,11 +163,11 @@ def handle_cd_command(command, cwd, virtual_root):
     if not is_within_root(target_path, virtual_root):
         return cwd, f"<cd denied: {target_path} outside virtual root {virtual_root}>"
 
-    if len(tokens) > 2:
-        cd_err_cnt += 1
-        if cd_err_cnt >= 3:
-            raise Exception(f"FATAL: Agent access violation:: Due to security reason, cd command can only be invoked separately. The request has been blocked and the conversation has been interrupted due to {cd_err_cnt} violations.")
-        return Path.cwd(), f"FATAL: Due to security reason, cd command can only be invoked separately. The request has been blocked."
+    # if len(tokens) > 2:
+        # cd_err_cnt += 1
+        # if cd_err_cnt >= 3:
+            # raise Exception(f"FATAL: Agent access violation:: Due to security reason, cd command can only be invoked separately. The request has been blocked and the conversation has been interrupted due to {cd_err_cnt} violations.")
+        # return Path.cwd(), f"FATAL: Due to security reason, cd command can only be invoked separately. The request has been blocked."
     try:
         os.chdir(target_path)
         new_cwd = Path.cwd()
@@ -263,10 +282,10 @@ def build_system_message(root_dir):
             "You are an assistant that can request execution of shell commands via a tool call named "
             "\"execute_command\". Only request the tool when you *need* to run commands. "
             f"The user's OS: {OS_INFO}. The shell available is '{SHELL_TYPE}'.\n\n"
-            "Important: when you ask to change directory use 'cd <path>' syntax. The client's agent "
-            "enforces a virtual root (sandbox) and will deny cd outside that root. The agent will ALWAYS ask "
+            "Important: The client's agent "
+            "enforces a virtual root (sandbox) and will deny cd outside that root. The agent will **ALWAYS** ask "
             "the human user for confirmation before executing any requested command. If you want to provide "
-            "multi-step plans, consider describing them first."
+            "multi-step plans, consider describing them first. If you wants to change directory to complete a task, **ALWAYS** consider 'change_dir' tool first. Use 'cd foo && command' syntax **ONLY when the command is very simple**."
         )
     }
 
@@ -378,11 +397,6 @@ def repl():
                 newroot_path = safe_norm_path(newroot)
                 if not newroot_path.exists() or not newroot_path.is_dir():
                     print(f"路径 {newroot_path} 不存在或不是目录")
-                    continue
-                # ensure new root is inside initial start_dir? Here we allow any path under system, but you can restrict further.
-                # For PoC we require newroot to be within start_dir to simulate virtual root without root privilege
-                if not is_within_root(newroot_path, start_dir):
-                    print("为了安全起见，PoC 要求新 root 必须在脚本启动目录之内。拒绝。")
                     continue
                 virtual_root = newroot_path
                 # if current cwd is outside new root, set cwd to new root
@@ -509,7 +523,7 @@ def repl():
                     except Exception:
                         args = {"command": args_raw}
             
-                    command = args.get("command", "")
+                    command = args.get("command", args.get("path", ""))
             
                     print(f"{C.YELLOW}\n模型请求执行命令 (tool={func_name}):\n>>> {command}{C.RESET}\n")
                     stripped = command.strip()
@@ -518,8 +532,8 @@ def repl():
                         # print("自动执行cd命令。")
                     # else:
                     if True:
-                        yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行，当前截断大小：{current_truncate_val}) ").strip()
-                    if yn.lower() not in ("y", "n", "s", "t"):
+                        yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行) ").strip()
+                    if yn.lower() not in ("y", "n", "s", "t", "e"):
                         print("将把自定义消息传递给模型。")
             
                     if yn.lower() == "n":
@@ -530,18 +544,30 @@ def repl():
                         result_str = "<skipped by user>"
                         print("已跳过（返回跳过标记）")
             
-                    elif yn.lower() == "y" or yn.lower() == "t":
-                        if stripped.startswith("cd ") or stripped == "cd":
+                    elif yn.lower() == "y" or yn.lower() == "t" or yn.lower() == "e":
+                        # if stripped.startswith("cd ") or stripped == "cd":
+                        if func_name == "change_dir":
                             cwd, result_str = handle_cd_command(command, cwd, virtual_root)
                             print(f"{C.DIM}{result_str}{C.RESET}")
                         else:
+                            result_str = ""
                             try:
                                 if yn.lower() == "t":
-                                    current_truncate_val = int(input("请输入新的截断大小（务必需要是数字）: "))
-                                result_str = execute_subprocess(command, cwd)
+                                    current_truncate_val = int(input(f"当前截断大小：{current_truncate_val}，请输入新的截断大小（务必需要是数字）: "))
+                                elif yn.lower() == "e":
+                                    import tempfile
+                                    with tempfile.NamedTemporaryFile(mode='w+', suffix='.sh', delete=True) as tmp:
+                                        tmp.write(command)
+                                        tmp.flush()
+                                        os.fsync(tmp.fileno())
+                                        subprocess.run(['vim', tmp.name])
+                                        tmp.seek(0)  # 回到文件开头
+                                        command = tmp.read()
+                                        result_str += f"<user edited the command>\nNew command is as follows:\n{command}\n\n---\n"
+                                result_str += execute_subprocess(command, cwd)
                             except Exception as e:
-                                result_str = f"<exec failed: {e}>"
-            
+                                result_str += f"<exec failed: {e}>"
+
                             MAX_CHARS = 200000
                             if len(result_str) > MAX_CHARS:
                                 result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
