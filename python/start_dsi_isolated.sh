@@ -84,6 +84,8 @@ else
     exit 1
 fi
 
+cp "$(realpath "$0")" "$INSTANCE_DIR/startup.sh"
+
 # If a session file is specified, copy it into the instance directory as history.txt
 EXTRA_ARGS=()
 if [[ -n "$SESSION_FILE" ]]; then
