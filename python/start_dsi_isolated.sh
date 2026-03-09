@@ -45,18 +45,46 @@ elif [[ $# -eq 1 ]]; then
 fi
 
 # Generate a unique instance ID
-if command -v uuidgen >/dev/null 2>&1; then
-    INSTANCE_ID=$(uuidgen)
-else
-    INSTANCE_ID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || date +%s%N)
-fi
+INSTANCE_ID=$(mkuuid)
 
 # Define working directory
 BASE_CACHE="/data/data/com.termux/cache"
 INSTANCE_DIR="${BASE_CACHE}/workspace_${INSTANCE_ID}"
 
+handle_save() {
+    if [[ -f "$INSTANCE_DIR/session.txt" ]]; then
+        if [[ -n "$SESSION_FILE" ]]; then
+            # 有外部文件：直接复制回去
+            cp "$INSTANCE_DIR/session.txt" "$SESSION_FILE"
+            echo "会话已保存到 $SESSION_FILE"
+        else
+            # 无外部文件：询问用户是否保存
+            echo
+            read -p "退出，是否保存对话？ (y/n) " -r ans
+            if [[ "$ans" =~ ^[Yy]$ ]]; then
+                default_path="/sdcard/$(date +%Y%m%dT%H%M%S).json"
+                read -p "保存到文件（回车为默认 $default_path）: " -r save_path
+                if [[ -z "$save_path" ]]; then
+                    save_path="$default_path"
+                fi
+                # 确保目标目录存在
+                mkdir -p "$(dirname "$save_path")"
+                if cp "$INSTANCE_DIR/session.txt" "$save_path"; then
+                    echo "已保存到 $save_path"
+                else
+                    echo "保存失败，请检查路径权限"
+                fi
+            fi
+        fi
+    else
+        echo "注意：未找到会话文件 session.txt，可能未产生任何对话。"
+    fi
+}
+
 # Cleanup function
 cleanup() {
+    handle_save
+    
     if [[ "$KEEP_DIR" != true ]] && [[ -n "$INSTANCE_DIR" && -d "$INSTANCE_DIR" ]]; then
         echo "Cleaning up temporary directory: $INSTANCE_DIR"
         rm -rf "$INSTANCE_DIR"
@@ -136,34 +164,5 @@ echo "Booting instance $INSTANCE_ID ..."
 "${PROOT_CMD[@]}"
 RET=$?
 echo "Instance $INSTANCE_ID finished with exit code: $RET"
-
-# ========== 会话保存处理 ==========
-if [[ -f "$INSTANCE_DIR/session.txt" ]]; then
-    if [[ -n "$SESSION_FILE" ]]; then
-        # 有外部文件：直接复制回去
-        cp "$INSTANCE_DIR/session.txt" "$SESSION_FILE"
-        echo "会话已保存到 $SESSION_FILE"
-    else
-        # 无外部文件：询问用户是否保存
-        echo
-        read -p "退出，是否保存对话？ (y/n) " -r ans
-        if [[ "$ans" =~ ^[Yy]$ ]]; then
-            default_path="/sdcard/$(date +%Y%m%dT%H%M%S).json"
-            read -p "保存到文件（回车为默认 $default_path）: " -r save_path
-            if [[ -z "$save_path" ]]; then
-                save_path="$default_path"
-            fi
-            # 确保目标目录存在
-            mkdir -p "$(dirname "$save_path")"
-            if cp "$INSTANCE_DIR/session.txt" "$save_path"; then
-                echo "已保存到 $save_path"
-            else
-                echo "保存失败，请检查路径权限"
-            fi
-        fi
-    fi
-else
-    echo "注意：未找到会话文件 session.txt，可能未产生任何对话。"
-fi
 
 exit $RET
