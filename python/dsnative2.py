@@ -318,21 +318,69 @@ def build_system_message(root_dir):
         )
     }
 
-def repl():
+def load_messages_from_file(filename, current_virtual_root):
+    """
+    从文件加载对话历史，并重建系统消息（移除所有旧的系统消息）。
+    返回加载后的消息列表（包含新的系统消息）。
+    """
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            loaded = json.load(f)
+        if not isinstance(loaded, list):
+            print(f"错误：{filename} 不是有效的 JSON 数组")
+            return None
+        # 移除所有已有的系统消息
+        filtered = [msg for msg in loaded if msg.get("role") != "system"]
+        # 插入新的系统消息
+        filtered.insert(0, build_system_message(str(current_virtual_root)))
+        return filtered
+    except Exception as e:
+        print(f"加载 {filename} 失败: {e}")
+        return None
+
+def save_messages_to_file(messages, filename):
+    """保存消息列表到文件，自动处理异常"""
+    try:
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(messages, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print(f"保存到 {filename} 失败: {e}")
+        return False
+
+def repl(session_path=None, load_path=None):
     # initial state
     start_dir = Path.cwd().resolve()
     virtual_root = start_dir  # initial virtual root is current working directory
     cwd = start_dir
     global current_truncate_val
-
+    
+    session_save_path = session_path   # 可能为 None
+    load_only_path = load_path
+    
+    # 初始化消息列表（先创建一个临时系统消息，稍后可能被替换）
+    messages = [build_system_message(str(virtual_root))]
+    
+    # 加载逻辑（优先级：load_only_path > session_save_path）
+    loaded_from = None
+    if load_only_path and os.path.exists(load_only_path):
+        loaded = load_messages_from_file(load_only_path, virtual_root)
+        if loaded is not None:
+            messages = loaded
+            loaded_from = load_only_path
+            print(f"已从 {load_only_path} 加载会话")
+    elif session_save_path and os.path.exists(session_save_path):
+        loaded = load_messages_from_file(session_save_path, virtual_root)
+        if loaded is not None:
+            messages = loaded
+            loaded_from = session_save_path
+            print(f"已从 {session_save_path} 加载会话")
+    
     print("DeepSeek Agent REPL (PoC).")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /chroot [NEWROOT]")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT]")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     print("-----\n")
-
-    # messages with initial system prompt
-    messages = [build_system_message(str(virtual_root))]
 
     turn = 1
     while True:
@@ -370,17 +418,24 @@ def repl():
                 messages.append({"role": "user", "content": user_text})
                 # proceed to call model below
             elif cmd == "/exit":
-                print("退出，是否保存对话？ y/n", end=' ', flush=True)
-                ans = input().strip().lower()
-                if ans == "y":
-                    save_path = input("保存到文件（回车为默认）: ").strip()
-                    if not save_path:
-                        save_path = "/sdcard/" + (datetime.now().strftime("%Y%m%dT%H%M%S")) + '.json'
-                    with open(save_path, "w", encoding="utf-8") as f:
-                        json.dump(messages, f, ensure_ascii=False, indent=2)
-                    print(f"已保存到 {save_path}")
-                print("Bye.")
-                break
+                if session_save_path:
+                    # 自动保存到预设路径
+                    if save_messages_to_file(messages, session_save_path):
+                        print(f"会话已自动保存到 {session_save_path}")
+                    print("Bye.")
+                    break
+                else:
+                    # 原交互：询问是否保存
+                    print("退出，是否保存对话？ y/n", end=' ', flush=True)
+                    ans = input().strip().lower()
+                    if ans == "y":
+                        save_path = input("保存到文件（回车为默认）: ").strip()
+                        if not save_path:
+                            save_path = "/sdcard/" + (datetime.now().strftime("%Y%m%dT%H%M%S")) + '.json'
+                        if save_messages_to_file(messages, save_path):
+                            print(f"已保存到 {save_path}")
+                    print("Bye.")
+                    break
             elif cmd == "/save":
                 tokens = arg.split()
                 filename = tokens[0] if tokens else ""
@@ -394,9 +449,20 @@ def repl():
                     if yn != "y":
                         print("取消保存。")
                         continue
-                with open(filename, "w", encoding="utf-8") as f:
-                    json.dump(messages, f, ensure_ascii=False, indent=2)
-                print(f"会话已保存到 {filename}")
+                if save_messages_to_file(messages, filename):
+                    print(f"会话已保存到 {filename}")
+                continue
+            elif cmd == "/saveas":
+                # 用法：/saveas [新路径]
+                new_path = arg.strip()
+                if not new_path:
+                    print("用法：/saveas 新路径")
+                    continue
+                # 更新保存路径
+                session_save_path = new_path
+                # 立即保存
+                if save_messages_to_file(messages, session_save_path):
+                    print(f"会话已保存到 {session_save_path}")
                 continue
             elif cmd == "/load":
                 if not arg:
@@ -406,17 +472,10 @@ def repl():
                 if not os.path.exists(filename):
                     print(f"文件 {filename} 不存在。")
                     continue
-                with open(filename, "r", encoding="utf-8") as f:
-                    loaded = json.load(f)
-                # basic sanity: loaded should be a list of messages
-                if isinstance(loaded, list):
+                loaded = load_messages_from_file(filename, virtual_root)
+                if loaded is not None:
                     messages = loaded
-                    # rebuild system prompt to reflect current virtual_root
-                    messages.insert(0, build_system_message(str(virtual_root)))
-                    # clear_reasoning_content(messages)
                     print(f"已从 {filename} 加载会话")
-                else:
-                    print("文件格式无法识别（预期 JSON 数组）。")
                 continue
             elif cmd == "/chroot":
                 newroot = arg.strip()
@@ -437,7 +496,7 @@ def repl():
                 print(f"已设置虚拟根：{virtual_root}")
                 continue
             else:
-                print("未知特殊命令。支持: /i, /input, /exit, /save, /load, /chroot")
+                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot")
                 continue
         else:
             # Normal user input: send as user message
@@ -535,7 +594,10 @@ def repl():
                 **({ "tool_calls": tool_calls }
                    if tool_calls else {}),
             })
-        
+            # 如果指定了 session 文件，每次助手回复后自动保存
+            if session_save_path:
+                save_messages_to_file(messages, session_save_path)
+                
             if not tool_calls:
                 # 没有工具调用，说明是最终回答
                 break
@@ -619,13 +681,20 @@ def repl():
             if has_excep:
                 break
             sub_turn += 1
-        # 清理推理内容
-        #for msg in messages:
-        #    if msg.get("role") == "assistant" and "reasoning_content" in msg:
-        #        msg["reasoning_content"] = None
+        # # 清理推理内容
+        # for msg in messages:
+           # if msg.get("role") == "assistant" and "reasoning_content" in msg:
+               # msg["reasoning_content"] = None
         turn += 1
         # Loop back to read next user input
 
 if __name__ == "__main__":
     enable_vt_mode()
-    repl()
+    
+    import argparse
+    parser = argparse.ArgumentParser(description='DeepSeek Agent REPL')
+    parser.add_argument('-s', '--session', metavar='FILE', help='Set the session file location (an association will be established)')
+    parser.add_argument('-l', '--load', '--load-from', dest='load_from', metavar='FILE', help='Load conversation history from the specified file (no association will be established after the content was loaded)')
+    args = parser.parse_args()
+    
+    repl(session_path=args.session, load_path=args.load_from)
