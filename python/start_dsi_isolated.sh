@@ -106,6 +106,8 @@ else
 fi
 export DEEPSEEK_API_KEY
 
+CWD="$(pwd)"
+
 # Change to instance directory (but proot will remap, actual execution outside)
 cd "$INSTANCE_DIR"
 
@@ -124,11 +126,11 @@ PROOT_CMD=(
     -b /etc
     -b /mnt
     -b /product
-    -b "$(pwd):/workspace"
+    -b "$CWD:/workspace"
     python3 /app.py "${EXTRA_ARGS[@]}"
 )
 
-echo "Starting instance $INSTANCE_ID ..."
+echo "Booting instance $INSTANCE_ID ..."
 "${PROOT_CMD[@]}"
 RET=$?
 echo "Instance $INSTANCE_ID finished with exit code: $RET"
