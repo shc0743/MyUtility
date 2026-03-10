@@ -59,7 +59,6 @@ handle_save() {
             echo "会话已保存到 $SESSION_FILE"
         else
             # 无外部文件：询问用户是否保存
-            echo
             read -p "退出，是否保存对话？ (y/n) " -r ans
             if [[ "$ans" =~ ^[Yy]$ ]]; then
                 default_path="/sdcard/$(date +%Y%m%dT%H%M%S).json"
@@ -68,31 +67,29 @@ handle_save() {
                     save_path="$default_path"
                 fi
                 # 确保目标目录存在
-                mkdir -p "$(dirname "$save_path")"
+                mkdir -p "$(dirname "$save_path")" || true
                 if cp "$INSTANCE_DIR/session.txt" "$save_path"; then
                     echo "已保存到 $save_path"
                 else
                     echo "保存失败，请检查路径权限"
+                    TEMP_SAVE="$(mktemp)"
+		    cp "$INSTANCE_DIR/session.txt" "$TEMP_SAVE" && echo "已临时缓存对话到 $TEMP_SAVE ,如有需要请及时处理"
                 fi
             fi
         fi
     else
-        echo "注意：未找到会话文件 session.txt，可能未产生任何对话。"
+        echo "未找到会话文件 session.txt，可能未产生任何对话。"
     fi
 }
 
 # Cleanup function
 cleanup() {
     handle_save
-    
     if [[ "$KEEP_DIR" != true ]] && [[ -n "$INSTANCE_DIR" && -d "$INSTANCE_DIR" ]]; then
         echo "Cleaning up temporary directory: $INSTANCE_DIR"
         rm -rf "$INSTANCE_DIR"
     fi
 }
-
-# Set traps (EXIT covers normal exit and interrupts)
-trap cleanup EXIT INT TERM
 
 # Create necessary subdirectories
 mkdir -p "$INSTANCE_DIR"/{linkerconfig,tmp}
@@ -119,7 +116,7 @@ EXTRA_ARGS=()
 if [[ -n "$SESSION_FILE" ]]; then
     if [[ -f "$SESSION_FILE" ]]; then
         cp "$SESSION_FILE" "$INSTANCE_DIR/history.txt"
-        EXTRA_ARGS+=(--load-from=/history.txt)
+        EXTRA_ARGS+=(--load=/history.txt)
     else
         echo "Warning: Session file $SESSION_FILE does not exist, ignoring load"
     fi
@@ -137,9 +134,6 @@ fi
 export DEEPSEEK_API_KEY
 
 CWD="$(pwd)"
-
-# Change to instance directory (but proot will remap, actual execution outside)
-cd "$INSTANCE_DIR"
 
 # Build proot command (note: /sdcard binding removed)
 PROOT_CMD=(
@@ -163,6 +157,10 @@ PROOT_CMD=(
 echo "Booting instance $INSTANCE_ID ..."
 "${PROOT_CMD[@]}"
 RET=$?
-echo "Instance $INSTANCE_ID finished with exit code: $RET"
+
+# Set traps (EXIT covers normal exit and interrupts)
+trap cleanup EXIT INT TERM
+
+echo "Instance $INSTANCE_ID finished with $RET."
 
 exit $RET
