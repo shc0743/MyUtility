@@ -30,7 +30,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick, onMounted } from 'vue'
+import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 interface Props {
   modelValue: boolean
@@ -68,9 +68,7 @@ const handleDialogClose = (): void => {
       // not programmatically close
       // re-open the dialog
       nextTick(() => {
-        if (dialogRef.value && !dialogRef.value.open) {
-          dialogRef.value.showModal()
-        }
+        if (dialogRef.value && !dialogRef.value.open) dialogRef.value.showModal()
       }) // Avoid using 'cancel' event because some browsers handle it incorrectly, see https://issues.chromium.org/issues/41491338
       return;
     }
@@ -78,6 +76,12 @@ const handleDialogClose = (): void => {
   if (props.modelValue) {
     emit('update:modelValue', false)
   }
+  nextTick(() => {
+    if (props.modelValue) {
+      // model value keep unchanged
+      if (dialogRef.value && !dialogRef.value.open) dialogRef.value.showModal()
+    }
+  })
   emit('closed')
 }
 
@@ -103,7 +107,13 @@ onMounted(() => {
       dialogRef.value.showModal()
     }
   }
-})
+});
+
+onBeforeUnmount(() => {
+  if (dialogRef.value && dialogRef.value.open) {
+    dialogRef.value.close()
+  }
+});
 
 defineExpose({
   open: openDialog,

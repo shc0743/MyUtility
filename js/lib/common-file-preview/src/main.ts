@@ -312,8 +312,8 @@ a:hover {
 }
 
 #app.text {
-    padding: 10px;
-    white-space: pre;
+    padding: var(--padding, 10px);
+    white-space: var(--white-space, pre);
     font-family: Consolas, monospace;
 }
 
