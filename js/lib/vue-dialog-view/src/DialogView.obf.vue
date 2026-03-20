@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount, onDeactivated, onActivated } from 'vue'
 
 interface Props {
   modelValue: boolean
@@ -68,7 +68,10 @@ const handleDialogCancel = (e: Event) => {
   if (props.closable) closeDialog();
 }
 
+const ignoreCloseEvent = ref(false);
+
 const handleDialogClose = (): void => {
+  if (ignoreCloseEvent.value) return;
   if (!props.closable) {
     if (props.modelValue) {
       // not programmatically close
@@ -107,18 +110,34 @@ watch(() => props.modelValue, async (newValue: boolean) => {
   }
 })
 
-onMounted(() => {
+const initDialog = () => {
   if (props.modelValue) {
     if (dialogRef.value && !dialogRef.value.open) {
       dialogRef.value.showModal()
     }
   }
+};
+
+onMounted(() => {
+  initDialog();
 });
 
 onBeforeUnmount(() => {
   if (dialogRef.value && dialogRef.value.open) {
     dialogRef.value.close()
   }
+});
+
+onDeactivated(() => {
+  if (dialogRef.value && dialogRef.value.open) {
+    ignoreCloseEvent.value = true;
+    dialogRef.value.close();
+    nextTick(() => ignoreCloseEvent.value = false);
+  }
+});
+
+onActivated(() => {
+  initDialog();
 });
 
 defineExpose({

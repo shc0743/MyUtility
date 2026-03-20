@@ -1,11 +1,11 @@
-import { defineComponent as w, ref as V, computed as y, watch as B, nextTick as c, onMounted as k, onBeforeUnmount as C, openBlock as n, createElementBlock as i, mergeProps as _, createElementVNode as p, renderSlot as r, withModifiers as b, createCommentVNode as f } from "vue";
-const D = ["closedBy"], M = {
+import { defineComponent as B, ref as m, computed as C, watch as k, nextTick as n, onMounted as D, onBeforeUnmount as _, onDeactivated as b, onActivated as M, openBlock as i, createElementBlock as u, mergeProps as $, createElementVNode as g, renderSlot as f, withModifiers as E, createCommentVNode as v } from "vue";
+const O = ["closedBy"], T = {
   key: 0,
   class: "dialog-title-bar"
-}, $ = { class: "dialog-title" }, O = { class: "dialog-content" }, T = {
+}, N = { class: "dialog-title" }, P = { class: "dialog-content" }, R = {
   key: 1,
   class: "dialog-footer"
-}, E = /* @__PURE__ */ w({
+}, q = /* @__PURE__ */ B({
   __name: "DialogView",
   props: {
     modelValue: { type: Boolean },
@@ -15,76 +15,86 @@ const D = ["closedBy"], M = {
     closeOnClickMask: { type: Boolean, default: !1 }
   },
   emits: ["update:modelValue", "closed"],
-  setup(l, { expose: u, emit: s }) {
-    const o = l, t = s, e = V(), v = () => {
+  setup(l, { expose: c, emit: s }) {
+    const o = l, t = s, e = m(), h = () => {
       t("update:modelValue", !0);
     }, d = () => {
       t("update:modelValue", !1);
-    }, m = (a) => {
+    }, w = (a) => {
       a.preventDefault(), o.closable && d();
-    }, g = () => {
-      if (!o.closable && o.modelValue) {
-        c(() => {
-          e.value && !e.value.open && e.value.showModal();
-        });
-        return;
+    }, r = m(!1), V = () => {
+      if (!r.value) {
+        if (!o.closable && o.modelValue) {
+          n(() => {
+            e.value && !e.value.open && e.value.showModal();
+          });
+          return;
+        }
+        o.modelValue && t("update:modelValue", !1), n(() => {
+          o.modelValue && e.value && !e.value.open && e.value.showModal();
+        }), t("closed");
       }
-      o.modelValue && t("update:modelValue", !1), c(() => {
-        o.modelValue && e.value && !e.value.open && e.value.showModal();
-      }), t("closed");
-    }, h = y(() => o.closable ? o.closeOnClickMask ? "any" : "closerequest" : "none");
-    return B(() => o.modelValue, async (a) => {
-      await c(), a ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
-    }), k(() => {
+    }, y = C(() => o.closable ? o.closeOnClickMask ? "any" : "closerequest" : "none");
+    k(() => o.modelValue, async (a) => {
+      await n(), a ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
+    });
+    const p = () => {
       o.modelValue && e.value && !e.value.open && e.value.showModal();
-    }), C(() => {
+    };
+    return D(() => {
+      p();
+    }), _(() => {
       e.value && e.value.open && e.value.close();
-    }), u({
+    }), b(() => {
+      e.value && e.value.open && (r.value = !0, e.value.close(), n(() => r.value = !1));
+    }), M(() => {
+      p();
+    }), c({
       get: () => e.value,
-      open: v,
+      open: h,
       close: d
-    }), (a, R) => (n(), i("dialog", _({
+    }), (a, S) => (i(), u("dialog", $({
       ref_key: "dialogRef",
       ref: e,
       class: "dialog-view"
     }, a.$attrs, {
-      onClose: g,
-      onCancel: m,
-      closedBy: h.value
+      onClose: V,
+      onCancel: w,
+      closedBy: y.value
     }), [
-      l.showTitleBar ? (n(), i("div", M, [
-        p("span", $, [
-          r(a.$slots, "title", {}, void 0, !0)
+      l.showTitleBar ? (i(), u("div", T, [
+        g("span", N, [
+          f(a.$slots, "title", {}, void 0, !0)
         ]),
-        l.showCloseButton && l.closable ? (n(), i("button", {
+        l.showCloseButton && l.closable ? (i(), u("button", {
           key: 0,
           type: "button",
           "aria-label": "Close the dialog",
           class: "dialog-close-button",
-          onClick: b(d, ["prevent"])
-        }, "×")) : f("", !0)
-      ])) : f("", !0),
-      p("div", O, [
-        r(a.$slots, "default", {}, void 0, !0)
+          onClick: E(d, ["prevent"])
+        }, "×")) : v("", !0)
+      ])) : v("", !0),
+      g("div", P, [
+        f(a.$slots, "default", {}, void 0, !0)
       ]),
-      a.$slots.footer ? (n(), i("div", T, [
-        r(a.$slots, "footer", {}, void 0, !0)
-      ])) : f("", !0)
-    ], 16, D));
+      a.$slots.footer ? (i(), u("div", R, [
+        f(a.$slots, "footer", {}, void 0, !0)
+      ])) : v("", !0)
+    ], 16, O));
   }
-}), N = (l, u) => {
+}), A = (l, c) => {
   const s = l.__vccOpts || l;
-  for (const [o, t] of u)
+  for (const [o, t] of c)
     s[o] = t;
   return s;
-}, P = /* @__PURE__ */ N(E, [["__scopeId", "data-v-da4085e6"]]), I = {
+}, I = /* @__PURE__ */ A(q, [["__scopeId", "data-v-7641dcfa"]]), j = {
   install: (l) => {
-    l.component("DialogView", P);
+    l.component("DialogView", I);
   }
 };
 export {
-  P as DialogView,
-  I as DialogViewPlugin,
-  I as default
+  I as DialogView,
+  j as DialogViewPlugin,
+  j as default
 };
 //# sourceMappingURL=cssless.es.js.map
