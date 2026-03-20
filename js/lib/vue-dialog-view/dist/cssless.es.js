@@ -1,11 +1,11 @@
-import { defineComponent as V, ref as h, computed as y, watch as B, nextTick as d, onMounted as k, onBeforeUnmount as C, openBlock as n, createElementBlock as i, mergeProps as _, createElementVNode as v, renderSlot as c, withModifiers as b, createCommentVNode as r } from "vue";
+import { defineComponent as w, ref as V, computed as y, watch as B, nextTick as c, onMounted as k, onBeforeUnmount as C, openBlock as n, createElementBlock as i, mergeProps as _, createElementVNode as p, renderSlot as r, withModifiers as b, createCommentVNode as f } from "vue";
 const D = ["closedBy"], M = {
   key: 0,
   class: "dialog-title-bar"
 }, $ = { class: "dialog-title" }, O = { class: "dialog-content" }, T = {
   key: 1,
   class: "dialog-footer"
-}, E = /* @__PURE__ */ V({
+}, E = /* @__PURE__ */ w({
   __name: "DialogView",
   props: {
     modelValue: { type: Boolean },
@@ -16,64 +16,68 @@ const D = ["closedBy"], M = {
   },
   emits: ["update:modelValue", "closed"],
   setup(l, { expose: u, emit: s }) {
-    const o = l, a = s, e = h(null), p = () => {
-      a("update:modelValue", !0);
-    }, m = () => {
-      a("update:modelValue", !1);
+    const o = l, t = s, e = V(), v = () => {
+      t("update:modelValue", !0);
+    }, d = () => {
+      t("update:modelValue", !1);
+    }, m = (a) => {
+      a.preventDefault(), o.closable && d();
     }, g = () => {
       if (!o.closable && o.modelValue) {
-        d(() => {
+        c(() => {
           e.value && !e.value.open && e.value.showModal();
         });
         return;
       }
-      o.modelValue && a("update:modelValue", !1), d(() => {
+      o.modelValue && t("update:modelValue", !1), c(() => {
         o.modelValue && e.value && !e.value.open && e.value.showModal();
-      }), a("closed");
-    }, w = y(() => o.closable ? o.closeOnClickMask ? "any" : "closerequest" : "none");
-    return B(() => o.modelValue, async (t) => {
-      await d(), t ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
+      }), t("closed");
+    }, h = y(() => o.closable ? o.closeOnClickMask ? "any" : "closerequest" : "none");
+    return B(() => o.modelValue, async (a) => {
+      await c(), a ? e.value && !e.value.open && e.value.showModal() : e.value && e.value.open && e.value.close();
     }), k(() => {
       o.modelValue && e.value && !e.value.open && e.value.showModal();
     }), C(() => {
       e.value && e.value.open && e.value.close();
     }), u({
-      open: p,
-      close: m
-    }), (t, f) => (n(), i("dialog", _({
+      get: () => e.value,
+      open: v,
+      close: d
+    }), (a, R) => (n(), i("dialog", _({
       ref_key: "dialogRef",
       ref: e,
       class: "dialog-view"
-    }, t.$attrs, {
+    }, a.$attrs, {
       onClose: g,
-      closedBy: w.value
+      onCancel: m,
+      closedBy: h.value
     }), [
       l.showTitleBar ? (n(), i("div", M, [
-        v("span", $, [
-          c(t.$slots, "title", {}, void 0, !0)
+        p("span", $, [
+          r(a.$slots, "title", {}, void 0, !0)
         ]),
         l.showCloseButton && l.closable ? (n(), i("button", {
           key: 0,
           type: "button",
           "aria-label": "Close the dialog",
           class: "dialog-close-button",
-          onClick: f[0] || (f[0] = b((R) => e.value?.close(), ["prevent"]))
-        }, "×")) : r("", !0)
-      ])) : r("", !0),
-      v("div", O, [
-        c(t.$slots, "default", {}, void 0, !0)
+          onClick: b(d, ["prevent"])
+        }, "×")) : f("", !0)
+      ])) : f("", !0),
+      p("div", O, [
+        r(a.$slots, "default", {}, void 0, !0)
       ]),
-      t.$slots.footer ? (n(), i("div", T, [
-        c(t.$slots, "footer", {}, void 0, !0)
-      ])) : r("", !0)
+      a.$slots.footer ? (n(), i("div", T, [
+        r(a.$slots, "footer", {}, void 0, !0)
+      ])) : f("", !0)
     ], 16, D));
   }
 }), N = (l, u) => {
   const s = l.__vccOpts || l;
-  for (const [o, a] of u)
-    s[o] = a;
+  for (const [o, t] of u)
+    s[o] = t;
   return s;
-}, P = /* @__PURE__ */ N(E, [["__scopeId", "data-v-81c5d076"]]), I = {
+}, P = /* @__PURE__ */ N(E, [["__scopeId", "data-v-da4085e6"]]), I = {
   install: (l) => {
     l.component("DialogView", P);
   }

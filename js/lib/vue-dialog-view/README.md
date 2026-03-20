@@ -6,16 +6,12 @@ A modern Vue 3 dialog component using the native HTML5 `<dialog>` element.
 
 ## ✨ Features
 
-* 🎯 **Native HTML5 Dialog** - Uses the built-in `<dialog>` element for better accessibility and performance
-* 🎨 **Customizable** - Configurable title bar and close button
-* 🖱️ **Click-to-close** - Optional backdrop click to close (using native closedby attribute)
-* ♿ **Accessible** - Proper ARIA labels and keyboard support
-* 📱 **Responsive** - Adapts to different screen sizes
-* 🎪 **Slot Support** - Flexible content slots for title, footer and main content
-* 🎭 **Vue 3 Ready** - Built with Composition API and TypeScript
-* 📦 **Multiple Distributions** - Choose between obfuscated / unobfuscated builds
-* 🎨 **Flexible CSS Strategy** - Automatic CSS injection (zero setup) or fully manual CSS loading
-* 🧩 **Tree-shake Friendly** - ESM and UMD builds available
+- 🎯 **Native `<dialog>`** – Built‑in element for better accessibility and performance  
+- ♿ **Accessible** – Proper ARIA labels, keyboard support  
+- 🎨 **Customizable** – Title bar, close button, backdrop click behaviour  
+- 🧩 **Slot support** – Title, footer, and main content slots  
+- 📦 **Vue 3 + TypeScript** – Composition API, tree‑shakable  
+- 🎭 **Flexible styling** – CSS variables for easy theming
 
 ---
 
@@ -27,9 +23,11 @@ npm i vue-dialog-view
 
 ---
 
-## 🚀 Quick Start (Default Build)
+## 🚀 Quick Start
 
-By default, styles are automatically injected into the page — no CSS import required.
+The default build automatically injects the required CSS – no extra import needed.
+
+### Global registration
 
 ```js
 import { createApp } from 'vue'
@@ -41,7 +39,7 @@ app.use(DialogView)
 app.mount('#app')
 ```
 
-Or local registration:
+### Local registration
 
 ```vue
 <script setup>
@@ -50,103 +48,90 @@ import { DialogView } from 'vue-dialog-view'
 
 const showDialog = ref(false)
 </script>
+
+<template>
+  <DialogView v-model="showDialog">
+    <p>Your content here</p>
+  </DialogView>
+</template>
 ```
 
 ---
 
-## 📚 Entry Points & Build Variants
+## 🧩 Props
 
-This package provides multiple entry points so you can choose the best trade-off between:
-
-* readability vs bundle size
-* debuggability vs encapsulation
-* automatic vs manual CSS loading
-
-### Overview
-
-| Entry                   | Import Path                          | Obfuscated | CSS Injected | Scoped CSS | Typical Use                    |
-| ----------------------- | ------------------------------------ | ---------- | ------------ | ---------- | ------------------------------ |
-| **Default**             | `vue-dialog-view`                    | ✅          | ✅            | ❌          | Production (zero setup)        |
-| **Unobfuscated**        | `vue-dialog-view/unobfuscated`       | ❌          | ✅            | ✅          | Debugging / Development        |
-| **CSS-less**            | `vue-dialog-view/cssless`            | ❌          | ❌            | ✅          | Manual CSS control             |
-| **CSS-less Obfuscated** | `vue-dialog-view/cssless-obfuscated` | ✅          | ❌            | ❌          | Advanced production setups     |
-| **Style**               | `vue-dialog-view/style`              | —          | —            | —          | Manual CSS import              |
-| **Style (Obfuscated)**  | `vue-dialog-view/style-obfuscated`   | —          | —            | —          | Manual CSS import (obfuscated) |
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `modelValue` | `boolean` | **required** | Controls dialog visibility (use `v-model`) |
+| `showTitleBar` | `boolean` | `true` | Show/hide the title bar |
+| `showCloseButton` | `boolean` | `true` | Show/hide the close button |
+| `closable` | `boolean` | `true` | Whether the user can close the dialog |
+| `closeOnClickMask` | `boolean` | `false` | Whether clicking the backdrop closes the dialog |
 
 ---
 
-### 🔹 Default Build (Recommended)
+## 📣 Events
 
-```js
-import DialogView from 'vue-dialog-view'
+| Event | Description |
+|-------|-------------|
+| `update:modelValue` | Emitted when visibility changes |
+| `closed` | Emitted after the dialog is fully closed |
+
+---
+
+## 🧪 Slots
+
+| Slot | Description |
+|------|-------------|
+| `#title` | Custom title content (replaces default title bar text) |
+| `#footer` | Footer content |
+| `default` | Main content area |
+
+---
+
+## 🔧 Methods (via template ref)
+
+The component exposes the following methods using `defineExpose`:
+
+```vue
+<script setup>
+import { ref } from 'vue'
+import { DialogView } from 'vue-dialog-view'
+
+const dialogRef = ref()
+
+// Open programmatically
+dialogRef.value.open()
+
+// Close programmatically
+dialogRef.value.close()
+
+// Access the underlying native <dialog> element
+dialogRef.value.get()
+</script>
+
+<template>
+  <DialogView ref="dialogRef" v-model="show">
+    <!-- content -->
+  </DialogView>
+</template>
 ```
 
-* ✔️ Obfuscated class names
-* ✔️ CSS automatically injected at runtime
-* ✔️ Zero configuration
-* ✔️ Small bundle size
-* ❌ Not intended for external CSS overrides
-
-Best choice for most applications.
+| Method | Description |
+|--------|-------------|
+| `open()` | Opens the dialog (sets `modelValue` to `true`) |
+| `close()` | Closes the dialog (sets `modelValue` to `false`) |
+| `get()` | Returns the native `<dialog>` DOM element |
 
 ---
 
-### 🔹 Unobfuscated Build
+## 🎨 Styling & Customisation
 
-```js
-import DialogView from 'vue-dialog-view/unobfuscated'
-```
-
-* ✔️ Human-readable class names
-* ✔️ Scoped CSS to avoid collisions
-* ✔️ Easier DOM inspection and debugging
-* ❌ Slightly larger output
-
-Recommended for development, debugging, and learning.
-
----
-
-### 🔹 CSS-less Build (Manual CSS Loading)
-
-```js
-import DialogView from 'vue-dialog-view/cssless'
-import 'vue-dialog-view/style'
-```
-
-* ✔️ No runtime CSS injection
-* ✔️ CSS loaded explicitly by the user
-* ✔️ Scoped CSS (non-obfuscated)
-* ✔️ Works well with bundler CSS pipelines
-
-Useful when your project enforces explicit CSS imports.
-
----
-
-### 🔹 CSS-less Obfuscated Build
-
-```js
-import DialogView from 'vue-dialog-view/cssless-obfuscated'
-import 'vue-dialog-view/style-obfuscated'
-```
-
-* ✔️ Obfuscated class names
-* ✔️ No runtime CSS injection
-* ✔️ Smallest runtime footprint
-* ❌ Not suitable for CSS customization
-
-Best for highly controlled production environments.
-
----
-
-## 🎨 Styling & Customization
-
-### CSS Custom Properties
-
-DialogView exposes a small set of CSS variables for safe customization:
+### CSS Variables
 
 ```css
 --dialog-padding        /* default: 20px */
---dialog-title-height  /* default: 24px */
+--dialog-title-height   /* default: 24px */
 ```
 
 Example:
@@ -158,57 +143,40 @@ Example:
 }
 ```
 
-These variables work consistently across all build variants.
-
-> ⚠️ Direct class-based overrides are discouraged in obfuscated builds.
+These variables work across all builds and are the recommended way to adjust spacing.
 
 ---
 
-## 🧩 Props
+## 🛠️ Advanced: Build Variants
 
-| Prop               | Type      | Default      | Description                                 |
-| ------------------ | --------- | ------------ | ------------------------------------------- |
-| `modelValue`       | `boolean` | **required** | Controls dialog visibility                  |
-| `showTitleBar`     | `boolean` | `true`       | Show or hide title bar                      |
-| `showCloseButton`  | `boolean` | `true`       | Show close button                           |
-| `closable`         | `boolean` | `true`       | Whether the user can close the dialog       |
-| `closeOnClickMask` | `boolean` | `false`      | Whether clicking backdrop closes the dialog |
+The package provides multiple entry points to balance bundle size, debuggability, and CSS control. **Most projects should use the default build** – the variants are only needed for special cases.
 
----
+| Build | Import Path | CSS Injected | Class Names | Use Case |
+|-------|-------------|--------------|-------------|----------|
+| **Default** | `vue-dialog-view` | ✅ | Obfuscated | Recommended for production |
+| Unobfuscated | `vue-dialog-view/unobfuscated` | ✅ | Readable | Debugging / development |
+| CSS‑less | `vue-dialog-view/cssless` | ❌ | Readable | When you need manual CSS control |
+| CSS‑less obfuscated | `vue-dialog-view/cssless-obfuscated` | ❌ | Obfuscated | Advanced production setups |
 
-## 📣 Events
+For CSS‑less builds you must import the style separately:
 
-| Event               | Description                   |
-| ------------------- | ----------------------------- |
-| `update:modelValue` | Fired when visibility changes |
-| `closed` | Fired when the dialog really closed |
+```js
+import DialogView from 'vue-dialog-view/cssless'
+import 'vue-dialog-view/style'
+```
 
----
+If you need the obfuscated style:
 
-## 🧪 Slots
-
-| Slot      | Description    |
-| --------- | -------------- |
-| `#title`  | Title content  |
-| `#footer` | Footer content |
-| `default` | Main content   |
-
----
-
-## 🔧 Methods
-
-```vue
-const dialogRef = ref()
-
-dialogRef.value.open()
-dialogRef.value.close()
+```js
+import DialogView from 'vue-dialog-view/cssless-obfuscated'
+import 'vue-dialog-view/style-obfuscated'
 ```
 
 ---
 
 ## 🌍 Browser Support
 
-Requires native HTML5 `<dialog>` support.
+Requires native HTML5 `<dialog>` support.  
 Use a polyfill for legacy browsers.
 
 ---

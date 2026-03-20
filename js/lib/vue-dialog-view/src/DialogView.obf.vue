@@ -4,6 +4,7 @@
     class="_b4102a3b79656a37"
     v-bind="$attrs"
     @close="handleDialogClose"
+    @cancel="handleDialogCancel"
     :closedBy="closedBy"
   >
     <div v-if="showTitleBar" class="_4d394b1507fdc584">
@@ -15,7 +16,7 @@
         type="button"
         aria-label="Close the dialog"
         class="_468ff1da37ead40a"
-        @click.prevent="dialogRef?.close()"
+        @click.prevent="closeDialog"
       >&times;</button>
     </div>
     
@@ -52,7 +53,7 @@ const emit = defineEmits<{
   (e: 'closed'): void
 }>()
 
-const dialogRef = ref<HTMLDialogElement | null>(null)
+const dialogRef = ref<HTMLDialogElement>();
 
 const openDialog = (): void => {
   emit('update:modelValue', true)
@@ -60,6 +61,11 @@ const openDialog = (): void => {
 
 const closeDialog = (): void => {
   emit('update:modelValue', false)
+}
+
+const handleDialogCancel = (e: Event) => {
+  e.preventDefault();
+  if (props.closable) closeDialog();
 }
 
 const handleDialogClose = (): void => {
@@ -116,9 +122,10 @@ onBeforeUnmount(() => {
 });
 
 defineExpose({
+  get: () => dialogRef.value,
   open: openDialog,
   close: closeDialog,
-})
+});
 </script>
 
 <style>
