@@ -1,12 +1,13 @@
 {
   "name": "add-css-constructed",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "type": "module",
   "description": "add a CSS to document or specified target using constructed stylesheet with fallback",
   "main": "./dist/esm.js",
   "types": "./d.ts",
   "exports": {
     ".": {
+      "types": "./d.ts",
       "import": "./dist/esm.js",
       "require": "./dist/cjs.js",
       "default": "./dist/umd.js"
