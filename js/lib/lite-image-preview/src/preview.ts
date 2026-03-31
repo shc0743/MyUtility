@@ -574,7 +574,7 @@ function bindGestures(
 export async function previewImage(
     url: string,
     dispose?: () => void
-): Promise<PreviewCloseHandle | null> {
+): Promise<PreviewCloseHandle> {
     const img = document.createElement('img')
 
     img.src = url
@@ -588,9 +588,9 @@ export async function previewImage(
 
     try {
         await waitForImageLoad(img)
-    } catch {
+    } catch (e) {
         dispose?.()
-        return null
+        throw new Error('Failed to load image', { cause: e });
     }
 
     return createPreview(

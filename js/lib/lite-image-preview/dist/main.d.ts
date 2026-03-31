@@ -105,7 +105,7 @@ declare function createPreview(content: HTMLElement, initAdapter: PreviewAdapter
  * The returned promise resolves to a close handle when the preview is ready.
  * If the image fails to load, the promise resolves to null.
  */
-declare function previewImage(url: string, dispose?: () => void): Promise<PreviewCloseHandle | null>;
+declare function previewImage(url: string, dispose?: () => void): Promise<PreviewCloseHandle>;
 /**
  * Open an SVG preview dialog.
  *

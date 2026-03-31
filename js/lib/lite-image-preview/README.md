@@ -77,7 +77,7 @@ if (close) {
 }
 ```
 
-If the image fails to load, `previewImage()` resolves to `null`.
+If the image fails to load, `previewImage()` throws an error.
 
 ---
 
@@ -92,7 +92,7 @@ Opens a preview dialog for a raster image.
 
 Returns:
 
-* `Promise<PreviewCloseHandle | null>`
+* `Promise<PreviewCloseHandle>`
 
 ### `previewSvg(svg, dispose?)`
 

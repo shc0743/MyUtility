@@ -539,9 +539,9 @@ async function previewImage(url, dispose) {
     `;
 	try {
 		await waitForImageLoad(img);
-	} catch {
+	} catch (e) {
 		dispose?.();
-		return null;
+		throw new Error("Failed to load image", { cause: e });
 	}
 	return createPreview(img, (stage) => {
 		return createTransformAdapter(img, stage, img.naturalWidth || 1, img.naturalHeight || 1, {
