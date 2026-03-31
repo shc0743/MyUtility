@@ -545,9 +545,9 @@ async function previewImage(url, dispose) {
 	}
 	return createPreview(img, (stage) => {
 		return createTransformAdapter(img, stage, img.naturalWidth || 1, img.naturalHeight || 1, {
-			minScale: .1,
-			maxScale: 8,
-			fitPadding: 32,
+			minScale: 0,
+			maxScale: 20,
+			fitPadding: 10,
 			fitMaxScale: 1
 		});
 	}, dispose);

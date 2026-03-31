@@ -600,9 +600,9 @@ export async function previewImage(
             const h = img.naturalHeight || 1
 
             return createTransformAdapter(img, stage, w, h, {
-                minScale: 0.1,
-                maxScale: 8,
-                fitPadding: 32,
+                minScale: 0,
+                maxScale: 20,
+                fitPadding: 10,
                 fitMaxScale: 1,
             })
         },
