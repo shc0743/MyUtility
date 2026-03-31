@@ -1,0 +1,63 @@
+{
+  "name": "lite-image-preview",
+  "version": "1.0.0",
+  "description": "Lightweight image and SVG preview dialog with smooth pinch zoom, crisp SVG scaling, and mobile-friendly gesture handling.",
+  "keywords": [
+    "front-end",
+    "preview",
+    "image",
+    "pan",
+    "pinch",
+    "zoom"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "license": "Unlicense",
+  "author": "chcs1013",
+  "type": "module",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "files": [
+    "README.md",
+    "LICENSE",
+    "src/**",
+    "dist/**",
+    "tsconfig.json",
+    "tsconfig.app.json",
+    "tsconfig.node.json",
+    "rolldown.config.js"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "import": "./dist/main.js",
+      "require": "./dist/main.cjs"
+    }
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rimraf dist && npm run build-only",
+    "build-only": "npm run build:esm && npm run build:cjs",
+    "build:esm": "rolldown -c",
+    "build:cjs": "rolldown -c --environment MODE:cjs",
+    "dev": "tsc --watch"
+  },
+  "bugs": {
+    "url": "https://github.com/shc0743/MyUtility/issues"
+  },
+  "homepage": "https://github.com/shc0743/MyUtility/tree/main/js/lib/lite-image-preview#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shc0743/MyUtility.git",
+    "directory": "js/lib/lite-image-preview"
+  },
+  "devDependencies": {
+    "@tsconfig/node24": "^24.0.4",
+    "rimraf": "^6.1.3",
+    "rolldown": "^1.0.0-rc.12",
+    "rolldown-plugin-dts": "^0.23.2",
+    "typescript": "^5.9.3"
+  }
+}
