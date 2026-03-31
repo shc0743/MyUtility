@@ -779,7 +779,8 @@ function createSvgViewBoxAdapter(svg: SVGSVGElement): PreviewAdapter {
         e.preventDefault()
 
         // Wheel up (deltaY < 0) zooms in; wheel down zooms out.
-        zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015))
+        // The SVG logic has a specified problem that reverses the factor
+        zoomAt(e.clientX, e.clientY, Math.exp(e.deltaY * 0.0015))
     }
 
     function destroy() {

@@ -1,6 +1,6 @@
 {
   "name": "lite-image-preview",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lightweight image and SVG preview dialog with smooth pinch zoom, crisp SVG scaling, and mobile-friendly gesture handling.",
   "keywords": [
     "front-end",

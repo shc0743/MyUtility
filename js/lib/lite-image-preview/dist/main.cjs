@@ -676,7 +676,7 @@ function createSvgViewBoxAdapter(svg) {
 	}
 	function zoomWithWheel(e) {
 		e.preventDefault();
-		zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * .0015));
+		zoomAt(e.clientX, e.clientY, Math.exp(e.deltaY * .0015));
 	}
 	function destroy() {
 		pinchStart = null;
