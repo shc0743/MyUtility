@@ -96,3 +96,25 @@ export interface PreviewAdapter extends PreviewController {
  * Factory function used by createPreview to initialize a rendering adapter.
  */
 export type PreviewAdapterFactory = (stage: HTMLElement) => PreviewAdapter
+
+/**
+ * Options for image previews.
+ */
+export interface ImagePreviewOptions {
+    /**
+     * Minimum zoom scale (default: 0.1).
+     */
+    minScale?: number
+    /**
+     * Maximum zoom scale (default: 8).
+     */
+    maxScale?: number
+    /**
+     * Padding around the image when fitting to stage (default: 0).
+     */
+    fitPadding?: number
+    /**
+     * Maximum scale when fitting to stage (default: 1).
+     */
+    fitMaxScale?: number
+}

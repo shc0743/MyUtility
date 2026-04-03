@@ -83,12 +83,13 @@ If the image fails to load, `previewImage()` throws an error.
 
 ## API overview
 
-### `previewImage(url, dispose?)`
+### `previewImage(url, dispose?, options?)`
 
 Opens a preview dialog for a raster image.
 
 * `url` — Image URL.
 * `dispose?` — Optional callback invoked after the dialog fully closes.
+* `options?` — Optional preview configuration (see `ImagePreviewOptions`).
 
 Returns:
 
@@ -234,6 +235,13 @@ The package exports the main types so advanced consumers can build custom adapte
 * `TransformState`
 * `ViewBox`
 * `PreviewCloseHandle`
+* `ImagePreviewOptions`
+
+`ImagePreviewOptions` includes:
+- `minScale?: number` — minimum zoom scale (default: 0.1)
+- `maxScale?: number` — maximum zoom scale (default: 8)
+- `fitPadding?: number` — padding around the image when fitting to stage (default: 0)
+- `fitMaxScale?: number` — maximum scale when fitting to stage (default: 1)
 
 ---
 

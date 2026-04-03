@@ -6,6 +6,7 @@ export type {
     PreviewController,
     PreviewAdapter,
     PreviewAdapterFactory,
+    ImagePreviewOptions,
 } from './types'
 
 export { createPreview, previewImage, previewSvg } from './preview'

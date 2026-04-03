@@ -5,6 +5,7 @@ import type {
     PreviewCloseHandle,
     TransformState,
     ViewBox,
+    ImagePreviewOptions,
 } from './types'
 import {
     clamp,
@@ -184,16 +185,11 @@ function createTransformAdapter(
     stage: HTMLElement,
     baseWidth: number,
     baseHeight: number,
-    options?: {
-        minScale?: number
-        maxScale?: number
-        fitPadding?: number
-        fitMaxScale?: number
-    }
+    options?: ImagePreviewOptions
 ): PreviewAdapter {
     const minScale = options?.minScale ?? 0.1
     const maxScale = options?.maxScale ?? 8
-    const fitPadding = options?.fitPadding ?? 32
+    const fitPadding = options?.fitPadding ?? 0
     const fitMaxScale = options?.fitMaxScale ?? 1
 
     const prev = {
@@ -573,7 +569,8 @@ function bindGestures(
  */
 export async function previewImage(
     url: string,
-    dispose?: () => void
+    dispose?: () => void,
+    options?: ImagePreviewOptions
 ): Promise<PreviewCloseHandle> {
     const img = document.createElement('img')
 
@@ -602,8 +599,9 @@ export async function previewImage(
             return createTransformAdapter(img, stage, w, h, {
                 minScale: 0,
                 maxScale: 20,
-                fitPadding: 10,
+                fitPadding: 0,
                 fitMaxScale: 1,
+                ...options,
             })
         },
         dispose

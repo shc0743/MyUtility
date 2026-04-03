@@ -237,7 +237,7 @@ function createPreview(content, initAdapter, dispose) {
 function createTransformAdapter(content, stage, baseWidth, baseHeight, options) {
 	const minScale = options?.minScale ?? .1;
 	const maxScale = options?.maxScale ?? 8;
-	const fitPadding = options?.fitPadding ?? 32;
+	const fitPadding = options?.fitPadding ?? 0;
 	const fitMaxScale = options?.fitMaxScale ?? 1;
 	const prev = {
 		transform: content.style.transform,
@@ -527,7 +527,7 @@ function bindGestures(content, adapter) {
 * The returned promise resolves to a close handle when the preview is ready.
 * If the image fails to load, the promise resolves to null.
 */
-async function previewImage(url, dispose) {
+async function previewImage(url, dispose, options) {
 	const img = document.createElement("img");
 	img.src = url;
 	img.alt = "";
@@ -547,8 +547,9 @@ async function previewImage(url, dispose) {
 		return createTransformAdapter(img, stage, img.naturalWidth || 1, img.naturalHeight || 1, {
 			minScale: 0,
 			maxScale: 20,
-			fitPadding: 10,
-			fitMaxScale: 1
+			fitPadding: 0,
+			fitMaxScale: 1,
+			...options
 		});
 	}, dispose);
 }

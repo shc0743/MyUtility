@@ -85,6 +85,27 @@ interface PreviewAdapter extends PreviewController {
  * Factory function used by createPreview to initialize a rendering adapter.
  */
 type PreviewAdapterFactory = (stage: HTMLElement) => PreviewAdapter;
+/**
+ * Options for image previews.
+ */
+interface ImagePreviewOptions {
+  /**
+   * Minimum zoom scale (default: 0.1).
+   */
+  minScale?: number;
+  /**
+   * Maximum zoom scale (default: 8).
+   */
+  maxScale?: number;
+  /**
+   * Padding around the image when fitting to stage (default: 0).
+   */
+  fitPadding?: number;
+  /**
+   * Maximum scale when fitting to stage (default: 1).
+   */
+  fitMaxScale?: number;
+}
 //#endregion
 //#region src/preview.d.ts
 /**
@@ -105,7 +126,7 @@ declare function createPreview(content: HTMLElement, initAdapter: PreviewAdapter
  * The returned promise resolves to a close handle when the preview is ready.
  * If the image fails to load, the promise resolves to null.
  */
-declare function previewImage(url: string, dispose?: () => void): Promise<PreviewCloseHandle>;
+declare function previewImage(url: string, dispose?: () => void, options?: ImagePreviewOptions): Promise<PreviewCloseHandle>;
 /**
  * Open an SVG preview dialog.
  *
@@ -113,4 +134,4 @@ declare function previewImage(url: string, dispose?: () => void): Promise<Previe
  */
 declare function previewSvg(svg: SVGSVGElement, dispose?: () => void): Promise<PreviewCloseHandle>;
 //#endregion
-export { type Point, type PreviewAdapter, type PreviewAdapterFactory, type PreviewCloseHandle, type PreviewController, type TransformState, type ViewBox, createPreview, previewImage, previewSvg };
+export { type ImagePreviewOptions, type Point, type PreviewAdapter, type PreviewAdapterFactory, type PreviewCloseHandle, type PreviewController, type TransformState, type ViewBox, createPreview, previewImage, previewSvg };
