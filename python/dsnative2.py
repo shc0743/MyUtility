@@ -21,6 +21,7 @@ from pathlib import Path
 from datetime import datetime
 import ctypes
 from ctypes import wintypes
+from typing import Tuple, Optional
 
 try:
     import readline # fix the input bug
@@ -30,6 +31,8 @@ except Exception:
 # ========== Config ==========
 BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")  # 可按需修改
 API_KEY_PATH = Path(os.environ.get("API_KEY_PATH", "/data/data/com.termux/files/home/skapikey.txt"))
+EXEC_FILTER = os.environ.get('DSNATIVE2_EXEC_FILTER', None)
+EXEC_RUNNER = os.environ.get('DSNATIVE2_EXEC_RUNNER', None)
 DEFAULT_MODEL = "deepseek-reasoner"  # 替换为你要用的模型标识
 TIMEOUT = 600
 TIMING_ENABLED = True
@@ -131,6 +134,45 @@ def clear_reasoning_content(messages):
     for m in messages:
         if isinstance(m, dict) and "reasoning_content" in m:
             m["reasoning_content"] = None
+            
+def run_command(command: str,
+                stdin_input: Optional[str] = None,
+                timeout: Optional[int] = None,
+                cwd: Optional[str] = None) -> Tuple[int, str]:
+    """
+    执行命令并返回退出码和合并的输出
+
+    Args:
+        command: 要执行的命令字符串
+        stdin_input: 作为子进程stdin输入的字符串，None表示不使用stdin
+        timeout: 超时时间（秒），None表示不超时
+        cwd: 工作目录，None表示当前目录
+
+    Returns:
+        Tuple[int, str]: (退出码, 合并的stdout+stderr 输出)
+
+    Raises:
+        FileNotFoundError: 命令不存在
+        subprocess.TimeoutExpired: 命令执行超时
+    """
+    # 使用 shlex.split 安全地分割命令参数
+    args = shlex.split(command)
+
+    # 执行命令，将 stderr 合并到 stdout
+    result = subprocess.run(
+        args,
+        input=stdin_input,        # 作为stdin输入
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,  # 关键：合并 stderr 到 stdout
+        text=True,
+        encoding='utf-8',
+        errors='replace',         # 遇到编码错误时用替换字符
+        timeout=timeout,
+        cwd=cwd,
+        check=False               # 不检查返回码，我们自己处理
+    )
+
+    return (result.returncode, result.stdout)
 
 cd_err_cnt = 0
 def handle_cd_command(command, cwd, virtual_root):
@@ -252,15 +294,18 @@ def execute_subprocess(command, cwd):
     - On Windows we let subprocess use shell=True (cmd.exe).
     """
     global current_truncate_val
+    global EXEC_RUNNER
     try:
         timingapidata = ""
         startTime = time.time()
-        if IS_WINDOWS:
+        if EXEC_RUNNER:
+            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace', cwd=str(cwd), executable=EXEC_RUNNER)
+        elif IS_WINDOWS:
             # Windows: shell via cmd.exe
-            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=str(cwd))
+            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace', cwd=str(cwd))
         else:
             # Unix: use bash -lc for better POSIX compatibility
-            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, cwd=str(cwd), executable="/bin/bash")
+            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace', cwd=str(cwd), executable="/bin/bash")
         out = proc.stdout or ""
         err = proc.stderr or ""
         rc = proc.returncode
@@ -354,6 +399,7 @@ def repl(session_path=None, load_path=None):
     virtual_root = start_dir  # initial virtual root is current working directory
     cwd = start_dir
     global current_truncate_val
+    global EXEC_FILTER
     
     session_save_path = session_path   # 可能为 None
     load_only_path = load_path
@@ -380,6 +426,10 @@ def repl(session_path=None, load_path=None):
     print(f"Working dir: {cwd}")
     print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT]")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
+    if EXEC_FILTER:
+        print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
+    if EXEC_RUNNER:
+        print('将使用以下解释器以运行命令:', EXEC_RUNNER)
     print("-----\n")
 
     turn = 1
@@ -580,6 +630,29 @@ def repl(session_path=None, load_path=None):
             
             tool_calls = list(tool_call_buffer.values()) or None
             
+            if tool_calls and EXEC_FILTER:
+                for i, tool_call in enumerate(tool_calls):
+                    function_info = tool_call.get('function', {})
+                    if function_info and function_info.get('name', '') == 'execute_command':
+                        try:
+                            args = json.loads(function_info.get('arguments', '{}'))
+                        except:
+                            continue
+                        if args and "command" in args:
+                            try:
+                                stat, filtered = run_command(EXEC_FILTER, args["command"])
+                                if stat != 0:
+                                    raise Exception('过滤器返回了', stat, filtered)
+                                args["old"] = args["command"]
+                                args["command"] = filtered
+                                tool_calls[i]["function"]["arguments"] = json.dumps(args)
+                            except Exception as e:
+                                print('错误: 无法运行过滤器')
+                                import traceback
+                                traceback.print_exc()
+                                args["command"] = 'exit 1 && SYSTEM ERROR: User filter failed: ' + str(e)
+                                tool_calls[i]["function"]["arguments"] = json.dumps(args)
+
             # 如果有工具调用，并且 reasoning_content 为空但 content 不为空，把 content 当作 reasoning_content
             #if (tool_calls is not None) and (collected_message.get("reasoning_content") == "") and not (collected_message.get("content") == ""):
             #    collected_message["reasoning_content"], collected_message["content"] = collected_message["content"], ""
@@ -623,8 +696,8 @@ def repl(session_path=None, load_path=None):
                         # print("自动执行cd命令。")
                     # else:
                     if True:
-                        yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行) ").strip()
-                    if yn.lower() not in ("y", "n", "s", "t", "e"):
+                        yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行) ").strip()
+                    if yn.lower() not in ("y", "n", "s", "t", "e", "r"):
                         print("将把自定义消息传递给模型。")
             
                     if yn.lower() == "n":
@@ -635,7 +708,7 @@ def repl(session_path=None, load_path=None):
                         result_str = "<skipped by user>"
                         print("已跳过（返回跳过标记）")
             
-                    elif yn.lower() == "y" or yn.lower() == "t" or yn.lower() == "e":
+                    elif yn.lower() == "y" or yn.lower() == "t" or yn.lower() == "e" or yn.lower() == "r":
                         # if stripped.startswith("cd ") or stripped == "cd":
                         if func_name == "change_dir":
                             cwd, result_str = handle_cd_command(command, cwd, virtual_root)
@@ -655,6 +728,9 @@ def repl(session_path=None, load_path=None):
                                         tmp.seek(0)  # 回到文件开头
                                         command = tmp.read()
                                         result_str += f"<user edited the command>\nNew command is as follows:\n{command}\n\n---\n"
+                                elif yn.lower() == "r":
+                                    command = args.get("old", command)
+                                    print('将要执行:', command)
                                 result_str += execute_subprocess(command, cwd)
                             except Exception as e:
                                 result_str += f"<exec failed: {e}>"

@@ -133,6 +133,12 @@ else
 fi
 export DEEPSEEK_API_KEY
 
+bindAiShared=()
+if [[ -d "$HOME/ai-shared" ]]; then
+    bindAiShared+=("-b")
+    bindAiShared+=("$HOME/ai-shared")
+fi
+
 CWD="$(pwd)"
 
 # Build proot command (note: /sdcard binding removed)
@@ -141,6 +147,7 @@ PROOT_CMD=(
     -r "$INSTANCE_DIR"
     -w "/workspace"
     -b "$PREFIX"
+    "${bindAiShared[@]}"
     -b /system
     -b /sys
     -b /vendor
