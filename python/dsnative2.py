@@ -643,7 +643,8 @@ def repl(session_path=None, load_path=None):
                                 stat, filtered = run_command(EXEC_FILTER, args["command"])
                                 if stat != 0:
                                     raise Exception('过滤器返回了', stat, filtered)
-                                args["old"] = args["command"]
+                                if filtered != args["command"]:
+                                    args["old"] = args["command"]
                                 args["command"] = filtered
                                 tool_calls[i]["function"]["arguments"] = json.dumps(args)
                             except Exception as e:
@@ -729,8 +730,12 @@ def repl(session_path=None, load_path=None):
                                         command = tmp.read()
                                         result_str += f"<user edited the command>\nNew command is as follows:\n{command}\n\n---\n"
                                 elif yn.lower() == "r":
-                                    command = args.get("old", command)
-                                    print('将要执行:', command)
+                                    # 如果存在 old 字段，恢复原始命令并删除 old 字段
+                                    if "old" in args:
+                                        command = args.pop("old")  # 获取原始命令并删除 old 字段
+                                        args["command"] = command  # 更新 command 字段
+                                        tool["function"]["arguments"] = json.dumps(args)  # 同步更新
+                                    print("将要执行:", command)
                                 result_str += execute_subprocess(command, cwd)
                             except Exception as e:
                                 result_str += f"<exec failed: {e}>"

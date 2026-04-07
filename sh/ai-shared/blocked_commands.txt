@@ -1,0 +1,2 @@
+(grep\s+?([\s\w\-_=]*?\s+?)*?-\w*?)r:::4:::This command is blocked by the client. Use `rg` instead.
+
