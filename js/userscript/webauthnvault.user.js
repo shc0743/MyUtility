@@ -10,6 +10,7 @@
 // @grant        GM_setValue
 // @grant        GM_deleteValue
 // @grant        GM_registerMenuCommand
+// @license      GPL-3.0-or-later
 // ==/UserScript==
 
 (() => {
