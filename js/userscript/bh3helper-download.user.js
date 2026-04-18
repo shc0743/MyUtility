@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         bh3helper-enhancer
 // @namespace    4b8b542a-3500-49bd-b857-8d62413434c7
-// @version      1.4.3
+// @version      1.4.8
 // @description  在bh3helper（《崩坏3》剧情助手）上提供增强功能
 // @author       -
 // @match        https://bh3helper.xrysnow.xyz/*
@@ -15,14 +15,14 @@
 // @grant        GM_getResourceText
 // @grant        GM_xmlhttpRequest
 // @connect      self
-// @require      https://unpkg.com/vue@3.5.26/dist/vue.global.prod.js#sha256-tAgDTQf3yKkfEX+epicjVa5F9Vy9oaStBwStjXA5gJU=
+// @require      https://unpkg.com/vue@3.5.29/dist/vue.global.prod.js#sha256-hfkySAzXB6JlXV9J1k1soidMaSMxITtrJKqz5BRRYNU=
 // @require      https://unpkg.com/@chcs1013/vue-expose-to-window@1.0.1/index.js#sha256-0zwVsGUKw70iQnySKWxo81tEXaVhqZg7rF2yBH+0wAg=
-// @require      https://unpkg.com/vue-dialog-view@1.7.1/dist/cssless.umd.js#sha256-cH5113wW7G1+ZShZmyVUL1FVmBUEHzCzTO/Qy7+gMDg=
+// @require      https://unpkg.com/vue-dialog-view@1.8.0/dist/cssless.umd.js#sha256-jk1w50BKZQVK5PLPvl2ahXr0u1wMD9f1iMnEQsN8se8=
 // @require      https://unpkg.com/fflate@0.8.2/umd/index.js#sha256-w7NPLp9edNTX1k4BysegwBlUxsQGQU1CGFx7U9aHXd8=
 // @require      https://unpkg.com/add-css-constructed@1.1.1/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
 // @require      https://unpkg.com/lz-string@1.5.0/libs/lz-string.min.js#sha256-lfTRy/CZ9XFhtmS8BIQm7D35JjeAGkx5EW6DMVqnh+c=
 // @resource     treejs https://unpkg.com/vue3-tree@0.11.5/dist/vue3-tree.js#sha256-cUAWVV0/sMo44jc45yFH2uEv6+AkMGKZod8QdY/vMqA=
-// @resource     dialog_css https://unpkg.com/vue-dialog-view@1.7.1/dist/vue-dialog-view.css#sha256-HnPUNAFITfEE27CBFvnXJJBIw7snbNTkexmuZ95u160=
+// @resource     dialog_css https://unpkg.com/vue-dialog-view@1.8.0/dist/vue-dialog-view.css#sha256-6ft6/VYSW8uE5C010y3gkHPWJXCvKAc0dmM/nRn3swA=
 // @resource     treeview_css https://unpkg.com/vue3-tree@0.11.5/dist/style.css#sha256-pMwswRTw7jawlpe60P8W2yItWloUeREwp4DwlZkp3OI=
 // @run-at       document-start
 // @sandbox      raw
@@ -37,7 +37,7 @@
         CONTENT_WAIT_TIMEOUT: 15000,
         PAGE_LOAD_WAIT_TIMEOUT: 20000,
         EXPORT_WAIT_TIMEOUT: 1000 * 60 * 3,
-        DIALOG_SWITCH_CD_TIME: 80,
+        DIALOG_SWITCH_CD_TIME: Math.ceil(1000 / 60 * 5),
         COMMON_PAGE_BASE_URL: '/pages/common.html',
         PAGE_BASE_URL: '/pages/',
         IGNORE_COLOR_CODE: ['#fedf4c', '#fedf5c'],
@@ -576,7 +576,7 @@ details[open] > .dlg-help-summary::before {
             </template>
         </dialog-view>
 
-        <dialog-view v-model="showPromptDialog" @closed="promptResolver.reject?.(null)">
+        <dialog-view v-model="showPromptDialog" @closed="promptResolver.reject?.(null)" closeOnClickMask>
             <template #title>{{ promptText }}</template>
             <div class="prompt-input-wrapper">
                 <input type="text" v-model="promptInput" autofocus :placeholder="promptPlaceholder ?? '请输入文本'">
@@ -589,7 +589,7 @@ details[open] > .dlg-help-summary::before {
             </template>
         </dialog-view>
 
-        <dialog-view v-model="showCloseOptionDlg">
+        <dialog-view v-model="showCloseOptionDlg" closeOnClickMask>
             <template #title>关闭</template>
             <div class="btn-group btn-group-vertical">
                 <button type="button" @click="showCloseOptionDlg = false; showPanel = false">关闭一次</button>
@@ -673,7 +673,7 @@ details[open] > .dlg-help-summary::before {
             </template>
         </dialog-view>
 
-        <dialog-view v-model="showMoreDownloadOptions">
+        <dialog-view v-model="showMoreDownloadOptions" closeOnClickMask>
             <template #title>更多下载选项</template>
             <div class="btn-group btn-group-vertical">
                 <button type="button" v-if="isHomePage" @click="showMoreDownloadOptions = false; showDownloadRawDataDlg = true">下载原始数据</button>
@@ -681,7 +681,7 @@ details[open] > .dlg-help-summary::before {
             </div>
         </dialog-view>
 
-        <dialog-view v-model="showDownloadRawDataDlg">
+        <dialog-view v-model="showDownloadRawDataDlg" closeOnClickMask>
             <template #title>下载原始数据</template>
             <div style="margin-bottom: 0.5em;">
                 <b style="margin-bottom: 0.5em; display: block;">即将打包下载所有数据文件，可用于{{ dlOptions.autoParseLzJs ? '进行文本分析' : '离线访问该网站' }}。</b>
@@ -1165,7 +1165,7 @@ details[open] > .dlg-help-summary::before {
             const selectorBase = `${constraints.join('')}{} div.external-link:not(:empty)`; // 注意必须是div，而不是<a>，<a>是真·外链
             const selectorBaseEx = `.content > *{}${constraints.join('')} > div.external-link:not(:empty)${otherSelectors.length ? (',' + otherSelectors.join(',')) : ''}`;
             const selectorMainStory = selectorBase.replace("{}", ".text-review-wrapper>") + ',' + selectorBaseEx.replace("{}", ":not(#collection-review-switch)"),
-                selectorCollections = selectorBase.replace("{}", ".collection-review-wrapper");
+                selectorCollections = selectorBase.replace("{}", "#collection-review-switch");
             let skipCount = 0;
             const resources = []; // 额外资源
             
@@ -1300,7 +1300,7 @@ details[open] > .dlg-help-summary::before {
                     result.push('-----\n\n');
                 }
                 // 7. 关闭当前对话框
-                const closeButton = contentDialog.querySelector('.dialog-btn-wrapper > .dialog-button.dialog-fs-button > .fa.fa-remove');
+                const closeButton = contentDialog.querySelector('.dialog-btn-wrapper:not(.dummy) > .dialog-button.dialog-fs-button');
                 if (closeButton) closeButton.click();
                 else contentDialog.style.display = 'none'; // 手动关闭
                 // 8. 冷却
@@ -1310,8 +1310,8 @@ details[open] > .dlg-help-summary::before {
 
             // 运行处理
             // 先选中元素
-            const mainStoryElements = main_content.querySelectorAll(selectorMainStory);
-            const collectionElements = main_content.querySelectorAll(selectorCollections);
+            const mainStoryElements = Array.from(main_content.querySelectorAll(selectorMainStory)).filter(el => !el.closest('#collection-review-switch'))
+            const collectionElements = Array.from(main_content.querySelectorAll(selectorCollections));
             // 统计总数
             total = mainStoryElements.length + (includeCollections ? collectionElements.length : 0);
             updateProgress(0);
@@ -1613,6 +1613,7 @@ details[open] > .dlg-help-summary::before {
                     '/index.html',
                     '/pages/common.html',
                     '/pages/search.html',
+                    '/pages/missing.html',
                     '/res/img/favicon.png',
                 ].concat(Object.values(ScriptIndex));
                 for (const file of presetFiles) {
