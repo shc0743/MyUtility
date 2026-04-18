@@ -4,6 +4,7 @@
 // @version      1.0.0
 // @description  A local WebAuthn virtual authenticator vault for userscript managers.
 // @match        https://*/*
+// @require      https://unpkg.com/add-css-constructed@1.1.3/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
 // @run-at       document-start
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -37,6 +38,10 @@
     panel: null,
   };
 
+  const host = document.createElement('div');
+  const shadow = host.attachShadow({ mode: 'closed' });
+  addCSS(':host { all: initial !important; }', shadow);
+
   const nativeCredentials = navigator.credentials;
   const nativeCreate = nativeCredentials?.create?.bind(nativeCredentials);
   const nativeGet = nativeCredentials?.get?.bind(nativeCredentials);
@@ -46,6 +51,56 @@
     UNLOCKED: 'Unlocked',
     UNINITIALIZED: 'Not initialized',
   };
+
+  function createPopoverContainer() {
+    const container = document.createElement('div');
+    container.style.cssText = 'position:fixed;inset:0;box-sizing:border-box;border:0;padding:0;width:100%;height:100%;background:transparent;cursor:not-allowed';
+    container.popover = 'manual';
+    shadow.appendChild(container);
+    memory.popoverContainer = container;
+    return container;
+  }
+
+  function showMessage(message, type = 'info') {
+    const toast = document.createElement('div');
+    const bgColor = type === 'error' ? '#aa3344' : type === 'warn' ? '#d7a84d' : '#2b7cff';
+    toast.style.cssText = `position:fixed;bottom:16px;right:16px;z-index:2147483647;padding:12px 16px;border-radius:10px;background:${bgColor};color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:13px;max-width:320px;box-shadow:0 4px 16px rgba(0,0,0,0.3);display:flex;align-items:center;gap:8px;`;
+    toast.appendChild(document.createTextNode(message));
+    const container = createPopoverContainer();
+    container.appendChild(toast);
+    shadow.appendChild(container);
+    container.showPopover();
+    setTimeout(() => container.remove(), 3000);
+  }
+
+  addCSS('.confirm-dialog button { padding: 8px 16px; border-radius: 5px; cursor: pointer; }', shadow);
+  function confirm(message) {
+    return new Promise((resolve) => {
+      const dlg = document.createElement('dialog');
+      dlg.classList.add('confirm-dialog');
+      const content = document.createElement('div');
+      content.style.fontSize = 'large';
+      content.style.marginBottom = '10px';
+      content.appendChild(document.createTextNode(message));
+      dlg.appendChild(content);
+      const btnGroup = document.createElement('div');
+      btnGroup.style.display = 'flex';
+      btnGroup.style.justifyContent = 'flex-end';
+      btnGroup.style.gap = '8px';
+      const confirmBtn = document.createElement('button');
+      confirmBtn.textContent = 'Confirm';
+      confirmBtn.addEventListener('click', () => (resolve(true), dlg.close()));
+      btnGroup.appendChild(confirmBtn);
+      const cancelBtn = document.createElement('button');
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => dlg.close());
+      btnGroup.appendChild(cancelBtn);
+      dlg.appendChild(btnGroup);
+      dlg.addEventListener('close', () => resolve((dlg.remove(), false)));
+      shadow.appendChild(dlg);
+      dlg.showModal();
+    });
+  }
 
   function bytesToBase64(bytes) {
     let binary = '';
@@ -408,28 +463,43 @@
     memory.unlockPromise = (async () => {
       const existing = readState();
       if (!existing) {
-        const pin = requestPin({
+        const pin = await requestPin({
           title: 'Create a PIN',
           message: `Create a new PIN to ${interactiveReason}.`,
           confirm: true,
+          callback: async pin => {
+            if (!pin && !await confirm('Are you sure you want to use empty PIN?')) throw 'Please create a PIN';
+            return pin;
+          }
         });
-        if (!pin) return false;
+        if (pin == null) return false;
         await initializeNewVault(pin);
         return true;
       }
 
-      const pin = requestPin({
-        title: 'Unlock the vault',
-        message: `Enter the PIN to ${interactiveReason}.`,
-        confirm: false,
-      });
-      if (!pin) return false;
-      try {
-        return await unlockExistingVault(pin);
-      } catch (error) {
-        console.warn('WebAuthn vault unlock failed, falling back to system credentials.', error);
-        return false;
+      let unlocked = false;
+      let attempts = 0;
+      const maxAttempts = Infinity;
+
+      while (!unlocked && attempts < maxAttempts) {
+        attempts++;
+        const pin = await requestPin({
+          title: `Unlock the vault`,
+          message: attempts > 1 ? `Incorrect PIN. Please try again. (${attempts} attempts)` : `Enter the PIN to ${interactiveReason}.`,
+          confirm: false,
+          callback: async pin => {
+            await unlockExistingVault(pin);
+            return true;
+          }
+        });
+        if (pin == null) return false;
+
+        if (pin) {
+          unlocked = true;
+        }
       }
+
+      return unlocked;
     })().finally(() => {
       memory.unlockPromise = null;
     });
@@ -437,22 +507,87 @@
     return memory.unlockPromise;
   }
 
-  function requestPin({ title, message, confirm }) {
-    const first = window.prompt(`${title}\n\n${message}\n\nPIN:`, '');
-    if (first == null || first === '') return null;
-    if (!confirm) return first;
+  addCSS('.pin-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }.pin-dialog .error-message:empty { display: none; }', shadow);
+  function requestPin({ title, message, confirm, callback }) {
+    return new Promise((resolve) => {
+      const dialog = document.createElement('dialog');
+      dialog.classList.add('pin-dialog');
+      dialog.style.cssText = 'border:none;border-radius:16px;padding:0;width:400px;background:#11161f;color:#e7eaf0;font-family:Arial,Helvetica,sans-serif;';
+      dialog.innerHTML = `
+        <form method="dialog" style="margin:0;padding:24px;display:grid;gap:16px;">
+          <div style="font-size:18px;font-weight:700;">${escapeText(title)}</div>
+          <div style="font-size:13px;color:#a9b2c3;line-height:1.5;">${escapeText(message)}</div>
+          <div style="display:grid;gap:12px;">
+            <div style="display:grid;gap:8px;">
+              <label for="pin-input" style="font-size:13px;font-weight:600;">PIN:</label>
+              <input id="pin-input" type="password" autocomplete="off" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#e7eaf0;font:inherit;font-size:14px;outline:none;" />
+            </div>
+            <div style="display:${confirm ? 'grid' : 'none !important'};gap:8px;">
+              <label for="pin-confirm" style="font-size:13px;font-weight:600;">Confirm PIN:</label>
+              <input id="pin-confirm" type="password" autocomplete="off" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#e7eaf0;font:inherit;font-size:14px;outline:none;" />
+            </div>
+            <div style="color:red;" class="error-message"></div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+            <button type="button" data-action="cancel" style="padding:9px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);color:#e7eaf0;cursor:pointer;font:inherit;font-size:13px;">Cancel</button>
+            <button type="submit" data-action="submit" style="padding:9px 16px;border-radius:999px;border:none;background:#2b7cff;color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:600;">OK</button>
+          </div>
+        </form>
+      `;
 
-    const second = window.prompt(`${title}\n\nConfirm PIN:`, '');
-    if (second == null || second === '') return null;
-    if (first !== second) {
-      window.alert('The two PIN entries do not match.');
-      return null;
-    }
-    if (first.length < 6) {
-      window.alert('The PIN must contain at least 6 characters.');
-      return null;
-    }
-    return first;
+      shadow.appendChild(dialog);
+
+      const pinInput = dialog.querySelector('#pin-input');
+      const cancelBtn = dialog.querySelector('[data-action="cancel"]');
+      const submitBtn = dialog.querySelector('[data-action="submit"]');
+      const form = dialog.querySelector('form');
+      const errorMessage = dialog.querySelector('.error-message');
+
+      const cleanup = () => dialog.remove();
+
+      const handleCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      cancelBtn.addEventListener('click', handleCancel);
+      dialog.addEventListener('cancel', handleCancel);
+      dialog.addEventListener('close', () => {
+        cleanup();
+        resolve(null);
+      });
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errorMessage.textContent = '';
+        const value = pinInput.value;
+        if (confirm) {
+          const confirmInput = dialog.querySelector('#pin-confirm');
+          if (value !== confirmInput.value) {
+            errorMessage.textContent = 'The two PIN entries do not match. Please try again.';
+            return;
+          }
+          confirmInput.value = '';
+        }
+        pinInput.value = '';
+        let result = value;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        if (callback) try {
+          result = await callback(value);
+        } catch (e) {
+          errorMessage.textContent = String(e);
+          return;
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'OK';
+        }
+        resolve(result);
+        dialog.close();
+      });
+
+      dialog.showModal();
+      pinInput.focus();
+    });
   }
 
   function lockVault() {
@@ -867,8 +1002,53 @@
     return response;
   }
 
-  function createDefaultWebAuthnError(name = 'NotAllowedError', message = 'The operation was aborted.') {
+  function createDefaultWebAuthnError(name = 'NotAllowedError', message = 'The operation either timed out or was not allowed. See: https://www.w3.org/TR/webauthn-2/#sctn-privacy-considerations-client.') {
     return new DOMException(message, name);
+  }
+
+  function showWebAuthnPopover(type) {
+    return new Promise((resolve) => {
+      const container = createPopoverContainer();
+      container.style.background = 'rgba(255,255,255,0.2)';
+
+      const icon = type === 'create' ? '🔐' : '🔑';
+      const actionText = type === 'create' ? 'create' : 'get';
+
+      const notification = document.createElement('div');
+      notification.style.cssText = 'cursor:auto;max-width:360px;padding:12px 16px;border-radius:10px;background:#1a1f2e;color:#e7eaf0;font-family:Arial,Helvetica,sans-serif;font-size:16px;box-shadow:0 4px 16px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;gap:10px;position:fixed;right:1em;top:1em;';
+      notification.innerHTML = `
+        <span style="font-size:18px;flex-shrink:0;">${icon}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:bold;margin-bottom:2px;">WebAuthn Request</div>
+          <div style="color:#a9b2c3;font-size:14px;white-space:normal;overflow-wrap:anywhere;overflow:hidden;text-overflow:ellipsis;">${escapeText(location.hostname)} is attempting to ${actionText} a credential, continue?</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button data-action="allow" style="padding:6px 10px;border-radius:6px;border:none;background:#2b7cff;color:#fff;cursor:pointer;font:inherit;font-size:15px;font-weight:600;">✓</button>
+          <button data-action="fallback" style="padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#a9b2c3;cursor:pointer;font:inherit;font-size:15px;">↩</button>
+          <button data-action="deny" style="padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#a9b2c3;cursor:pointer;font:inherit;font-size:15px;">✕</button>
+        </div>
+      `;
+
+      container.appendChild(notification);
+
+      const handleAction = (action) => {
+        container.hidePopover();
+        container.remove();
+        resolve(action);
+      };
+
+      notification.querySelector('[data-action="allow"]').addEventListener('click', () => handleAction('allow'));
+      notification.querySelector('[data-action="fallback"]').addEventListener('click', () => handleAction('fallback'));
+      notification.querySelector('[data-action="deny"]').addEventListener('click', () => handleAction('deny'));
+
+      container.addEventListener('click', e => {
+        if (e.target !== container) return;
+        container.remove();
+        resolve('deny');
+      });
+
+      container.showPopover();
+    });
   }
 
   async function chooseCredentialForGet(records, requestOptions) {
@@ -892,8 +1072,12 @@
     try {
       if (!options?.publicKey) return fallbackNative ? fallbackNative(options) : Promise.reject(createDefaultWebAuthnError('NotSupportedError', 'navigator.credentials.create fallback is unavailable.'));
 
+      const userChoice = await showWebAuthnPopover('create');
+      if (userChoice === 'deny') return Promise.reject(createDefaultWebAuthnError());
+      if (userChoice === 'fallback') return fallbackNative ? fallbackNative(options) : Promise.reject(createDefaultWebAuthnError());
+
       const unlocked = await ensureUnlocked('create and store a passkey');
-      if (!unlocked) return fallbackNative ? fallbackNative(options) : Promise.reject(createDefaultWebAuthnError());
+      if (!unlocked) return Promise.reject(createDefaultWebAuthnError());
 
       const publicKey = options.publicKey;
       const rpId = getRpIdFromRequest(publicKey);
@@ -976,8 +1160,9 @@
       });
       return credential;
     } catch (error) {
-      console.warn('WebAuthn vault create failed, falling back to system credentials.', error);
-      return fallbackNative ? fallbackNative(options) : Promise.reject(error);
+      console.warn('WebAuthn vault create failed.', error);
+      showMessage(String(error), 'error');
+      return Promise.reject(error);
     }
   }
 
@@ -985,13 +1170,18 @@
     try {
       if (!options?.publicKey) return fallbackNative ? fallbackNative(options) : Promise.reject(createDefaultWebAuthnError('NotSupportedError', 'navigator.credentials.get fallback is unavailable.'));
 
+      const userChoice = await showWebAuthnPopover('get');
+      if (userChoice === 'deny') return Promise.reject(createDefaultWebAuthnError());
+      if (userChoice === 'fallback') return fallbackNative ? fallbackNative(options) : Promise.reject(createDefaultWebAuthnError());
+
       const unlocked = await ensureUnlocked('use a stored passkey');
-      if (!unlocked) return fallbackNative ? fallbackNative(options) : Promise.reject(createDefaultWebAuthnError());
+      if (!unlocked) return Promise.reject(createDefaultWebAuthnError());
 
       const publicKey = options.publicKey;
       const matchingRecords = getMatchingRecords(publicKey);
 
       if (matchingRecords.length === 0) {
+        showMessage('No matching credentials found for this request. We will use system credentials instead.', 'warn');
         return fallbackNative ? fallbackNative(options) : Promise.reject(createDefaultWebAuthnError());
       }
 
@@ -1179,16 +1369,6 @@
       });
     }
 
-    const host = document.createElement('div');
-    host.style.all = 'initial';
-    host.style.position = 'fixed';
-    host.style.left = '0';
-    host.style.top = '0';
-    host.style.width = '0';
-    host.style.height = '0';
-    host.style.zIndex = '2147483647';
-
-    const shadow = host.attachShadow({ mode: 'closed' });
     const dialog = document.createElement('dialog');
     dialog.className = 'vault-manage-dialog';
 
@@ -1245,27 +1425,30 @@
     dialog.appendChild(wrapper);
     shadow.appendChild(dialog);
 
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(`
-      :host {
-        all: initial;
-      }
-
+    addCSS(`
       dialog.vault-manage-dialog {
         border: none;
         border-radius: 18px;
         padding: 0;
-        width: min(960px, calc(100vw - 24px));
-        max-width: 960px;
-        max-height: min(90vh, 900px);
-        overflow: hidden;
+        width: 960px;
+        max-width: calc(100vw - 24px);
+        overflow: auto;
         box-shadow: 0 24px 64px rgba(0, 0, 0, 0.35);
         color: #e7eaf0;
         background: #11161f;
       }
 
       dialog::backdrop {
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.5);
+      }
+
+      dialog.vault-selection-dialog {
+        color:#e7eaf0;
+        background:#11161f;
+        width: 680px;
+        padding: 16px;
+        border-radius: 10px;
+        border: 0;
       }
 
       .vault-manage-panel {
@@ -1423,17 +1606,7 @@
         display: grid;
         gap: 10px;
       }
-    `);
-
-    if ('adoptedStyleSheets' in shadow) {
-      shadow.adoptedStyleSheets = [sheet];
-    } else {
-      const style = document.createElement('style');
-      style.textContent = `dialog.vault-manage-dialog { border: none; }`;
-      shadow.appendChild(style);
-    }
-
-    document.body.appendChild(host);
+    `, shadow);
 
     const statusEl = wrapper.querySelector('[data-role="status"]');
     const listEl = wrapper.querySelector('[data-role="record-list"]');
@@ -1475,7 +1648,7 @@
         deleteBtn.className = 'btn btn-danger';
         deleteBtn.textContent = 'Delete';
         deleteBtn.addEventListener('click', async () => {
-          if (!window.confirm('Delete this passkey from the vault?')) return;
+          if (!await confirm('Delete this passkey from the vault?')) return;
           memory.vault.records = memory.vault.records.filter((x) => x.credentialId !== record.credentialId);
           await persistCurrentVault();
           renderList();
@@ -1511,18 +1684,18 @@
       }
 
       if (!data) {
-        window.alert('Please provide a valid JSON backup to import.');
+        showMessage('Please provide a valid JSON backup to import.', 'error');
         return;
       }
 
       await mergeImportedVaultData(data);
       await persistCurrentVault();
       renderList();
-      window.alert('Import completed.');
+      showMessage('Import completed.');
     }
 
     async function doExport() {
-      if (!window.confirm('Exporting will create an unencrypted backup file. Continue?')) return;
+      if (!await confirm('Exporting will create an unencrypted backup file. Continue?')) return;
       const payload = exportVaultData();
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -1536,17 +1709,18 @@
 
     async function doChangePin() {
       if (!memory.unlocked || !memory.masterKey || !memory.state) {
-        window.alert('Unlock the vault first.');
+        showMessage('Unlock the vault first.', 'warn');
         return;
       }
 
-      const newPin = requestPin({
+      const newPin = await requestPin({
         title: 'Change PIN',
         message: 'Enter a new PIN.',
         confirm: true,
       });
 
-      if (!newPin) return;
+      if (null == newPin) return;
+      if (!newPin && !await confirm('Are you sure you want to use empty PIN?')) return await doChangePin();
 
       const salt = randomBytes(PIN_SALT_LENGTH_BYTES);
       const pinKey = await derivePinKey(newPin, salt);
@@ -1565,20 +1739,22 @@
       };
       memory.state.updatedAt = now();
       writeState(memory.state);
-      window.alert('PIN changed successfully.');
+      showMessage('PIN changed successfully.');
     }
 
     async function doReset() {
-      if (!window.confirm('Delete the entire vault, including all stored credentials?')) return;
+      if (!await confirm('Delete the entire vault, including all stored credentials?')) return;
+      if (!await confirm('LAST CONFIRM!! This will delete the entire vault, including all stored credentials!! Are you sure??')) return;
       deleteState();
       lockVault();
       dialog.close();
-      window.alert('Vault deleted.');
+      window.location.reload();
     }
 
     wrapper.querySelector('[data-action="close"]').addEventListener('click', () => dialog.close());
     wrapper.querySelector('[data-action="lock"]').addEventListener('click', () => {
       lockVault();
+      dialog.close();
       renderList();
       updateStatus(STATUS.LOCKED);
     });
@@ -1607,7 +1783,7 @@
         const selectionDialog = document.createElement('dialog');
         selectionDialog.className = 'vault-selection-dialog';
         selectionDialog.innerHTML = `
-          <form method="dialog" style="margin:0; padding:16px; min-width:min(680px, calc(100vw - 30px)); color:#e7eaf0; background:#11161f;">
+          <form method="dialog">
             <h3 style="margin:0 0 10px; font:700 18px Arial, Helvetica, sans-serif;">Choose a passkey</h3>
             <div style="margin:0 0 10px; color:#a9b2c3; font:13px Arial, Helvetica, sans-serif;">Select a stored credential or use the system authenticator.</div>
             <div data-role="selection-list" style="display:grid; gap:8px; max-height:45vh; overflow:auto; margin-bottom:12px;"></div>
@@ -1618,7 +1794,7 @@
           </form>
         `;
         selectionHost.appendChild(selectionDialog);
-        document.body.appendChild(selectionHost);
+        shadow.appendChild(selectionHost);
         const list = selectionDialog.querySelector('[data-role="selection-list"]');
 
         const closeAndCleanup = () => {
@@ -1676,21 +1852,36 @@
       panel.render();
     } catch (error) {
       console.error('Failed to open WebAuthn vault panel.', error);
-      window.alert('Unable to open the vault panel.');
+      showMessage('Unable to open the vault panel.', 'error');
     }
   }
 
   function registerMenu() {
     if (typeof GM_registerMenuCommand === 'function') {
-      GM_registerMenuCommand('WebAuthn Virtual Authenticator', () => {
+      GM_registerMenuCommand('Manage Passkeys', () => {
         openManagementPanel();
       });
     }
   }
 
+  async function setupRoot() {
+    if (!document.body) {
+      await new Promise((resolve) => {
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', resolve, { once: true });
+        } else {
+          resolve();
+        }
+      });
+    }
+    addCSS('dialog::backdrop { background: rgba(0, 0, 0, 0.5); }', shadow);
+    document.body.appendChild(host);
+  }
+
   async function main() {
     registerMenu();
     patchCredentials();
+    await setupRoot();
   }
 
   main().catch((error) => {
