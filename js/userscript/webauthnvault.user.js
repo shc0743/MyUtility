@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WebAuthn Virtual Authenticator Vault
 // @namespace    https://utility.clspd.top/go.html?product=webauthnvault
-// @version      1.0.1
+// @version      1.1.0
 // @description  A local WebAuthn virtual authenticator vault for userscript managers.
 // @match        https://*/*
 // @require      https://unpkg.com/add-css-constructed@1.1.3/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
@@ -509,6 +509,62 @@
   }
 
   addCSS('.pin-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }.pin-dialog .error-message:empty { display: none; }', shadow);
+  
+  function requestCounterIncrement() {
+    return new Promise((resolve) => {
+      const dialog = document.createElement('dialog');
+      dialog.classList.add('pin-dialog');
+      dialog.style.cssText = 'border:none;border-radius:16px;padding:0;width:360px;background:#11161f;color:#e7eaf0;font-family:Arial,Helvetica,sans-serif;';
+      dialog.innerHTML = `
+        <form method="dialog" style="margin:0;padding:24px;display:grid;gap:16px;">
+          <div style="font-size:18px;font-weight:700;">Increase Counter</div>
+          <div style="font-size:13px;color:#a9b2c3;line-height:1.5;">Enter the amount to increase the counter by:</div>
+          <div style="display:grid;gap:8px;">
+            <label for="counter-input" style="font-size:13px;font-weight:600;">Increment:</label>
+            <input id="counter-input" type="number" step="1" value="1" style="padding:10px 14px;border-radius:10px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.3);color:#e7eaf0;font:inherit;font-size:14px;outline:none;" />
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+            <button type="button" data-action="cancel" style="padding:9px 16px;border-radius:999px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);color:#e7eaf0;cursor:pointer;font:inherit;font-size:13px;">Cancel</button>
+            <button type="submit" data-action="submit" style="padding:9px 16px;border-radius:999px;border:none;background:#2b7cff;color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:600;">OK</button>
+          </div>
+        </form>
+      `;
+
+      shadow.appendChild(dialog);
+
+      const counterInput = dialog.querySelector('#counter-input');
+      const cancelBtn = dialog.querySelector('[data-action="cancel"]');
+      const submitBtn = dialog.querySelector('[data-action="submit"]');
+      const form = dialog.querySelector('form');
+
+      const cleanup = () => dialog.remove();
+
+      const handleCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      cancelBtn.addEventListener('click', handleCancel);
+      dialog.addEventListener('cancel', handleCancel);
+      dialog.addEventListener('close', () => {
+        cleanup();
+        resolve(null);
+      });
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const value = parseInt(counterInput.value, 10);
+        if (isNaN(value)) {
+          return;
+        }
+        cleanup();
+        resolve(value);
+      });
+
+      dialog.showModal();
+      counterInput.focus();
+    });
+  }
+
   function requestPin({ title, message, confirm, callback }) {
     return new Promise((resolve) => {
       const dialog = document.createElement('dialog');
@@ -1058,7 +1114,6 @@
 
   async function chooseCredentialForGet(records, requestOptions) {
     if (records.length === 0) return { action: 'system' };
-    if (records.length === 1) return { action: 'vault', record: records[0] };
 
     return new Promise((resolve) => {
       ensurePanel().then((panel) => {
@@ -1648,6 +1703,19 @@
         const actions = document.createElement('div');
         actions.className = 'record-actions';
 
+        const incrementBtn = document.createElement('button');
+        incrementBtn.type = 'button';
+        incrementBtn.className = 'btn';
+        incrementBtn.textContent = 'Increase Counter';
+        incrementBtn.addEventListener('click', async () => {
+          const increment = await requestCounterIncrement();
+          if (increment == null) return;
+          record.counter = (record.counter >>> 0) + increment;
+          await persistCurrentVault();
+          renderList();
+          showMessage(`Counter increased by ${increment}.`);
+        });
+
         const deleteBtn = document.createElement('button');
         deleteBtn.type = 'button';
         deleteBtn.className = 'btn btn-danger';
@@ -1659,13 +1727,17 @@
           renderList();
         });
 
+        actions.appendChild(incrementBtn);
         actions.appendChild(deleteBtn);
         top.appendChild(title);
         top.appendChild(actions);
 
         const meta = document.createElement('div');
         meta.className = 'record-meta';
-        meta.style.whiteSpace = 'pre';
+        meta.style.whiteSpace = 'pre-wrap';
+        meta.style.overflow = 'hidden';
+        meta.style.textOverflow = 'ellipsis';
+        meta.style.overflowWrap = 'anywhere';
         meta.style.fontSize = '12px';
         meta.style.color = '#a9b2c3';
         [
@@ -1815,6 +1887,9 @@
         };
 
         for (const record of records) {
+          const itemWrapper = document.createElement('div');
+          itemWrapper.style.cssText = 'display:grid; grid-template-columns: 1fr auto; gap:8px; align-items:center;';
+          
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.style.cssText = 'text-align:left; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:#e7eaf0; cursor:pointer;';
@@ -1837,7 +1912,25 @@
             closeAndCleanup();
             onUseVault(record);
           });
-          list.appendChild(btn);
+          
+          const incrementUseBtn = document.createElement('button');
+          incrementUseBtn.type = 'button';
+          incrementUseBtn.title = 'Increase counter and use';
+          incrementUseBtn.setAttribute('aria-label', 'Increase counter and use');
+          incrementUseBtn.textContent = '🔼';
+          incrementUseBtn.style.cssText = 'padding:12px 16px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:rgba(43,124,255,0.2); color:#2b7cff; cursor:pointer; font-size:16px;';
+          incrementUseBtn.addEventListener('click', async () => {
+            const increment = await requestCounterIncrement();
+            if (increment == null) return;
+            record.counter = (record.counter >>> 0) + increment;
+            await persistCurrentVault();
+            closeAndCleanup();
+            onUseVault(record);
+          });
+          
+          itemWrapper.appendChild(btn);
+          itemWrapper.appendChild(incrementUseBtn);
+          list.appendChild(itemWrapper);
         }
 
         selectionDialog.querySelector('[data-action="system"]').addEventListener('click', () => {
