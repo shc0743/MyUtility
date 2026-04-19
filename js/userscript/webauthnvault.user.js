@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WebAuthn Virtual Authenticator Vault
 // @namespace    https://utility.clspd.top/go.html?product=webauthnvault
-// @version      1.0.0
+// @version      1.0.1
 // @description  A local WebAuthn virtual authenticator vault for userscript managers.
 // @match        https://*/*
 // @require      https://unpkg.com/add-css-constructed@1.1.3/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
@@ -516,8 +516,8 @@
       dialog.style.cssText = 'border:none;border-radius:16px;padding:0;width:400px;background:#11161f;color:#e7eaf0;font-family:Arial,Helvetica,sans-serif;';
       dialog.innerHTML = `
         <form method="dialog" style="margin:0;padding:24px;display:grid;gap:16px;">
-          <div style="font-size:18px;font-weight:700;">${escapeText(title)}</div>
-          <div style="font-size:13px;color:#a9b2c3;line-height:1.5;">${escapeText(message)}</div>
+          <div style="font-size:18px;font-weight:700;" data-v=title></div>
+          <div style="font-size:13px;color:#a9b2c3;line-height:1.5;" data-v=message></div>
           <div style="display:grid;gap:12px;">
             <div style="display:grid;gap:8px;">
               <label for="pin-input" style="font-size:13px;font-weight:600;">PIN:</label>
@@ -535,6 +535,9 @@
           </div>
         </form>
       `;
+
+      dialog.querySelector('[data-v="title"]').textContent = title;
+      dialog.querySelector('[data-v="message"]').textContent = message;
 
       shadow.appendChild(dialog);
 
@@ -1021,7 +1024,7 @@
         <span style="font-size:18px;flex-shrink:0;">${icon}</span>
         <div style="flex:1;min-width:0;">
           <div style="font-weight:bold;margin-bottom:2px;">WebAuthn Request</div>
-          <div style="color:#a9b2c3;font-size:14px;white-space:normal;overflow-wrap:anywhere;overflow:hidden;text-overflow:ellipsis;">${escapeText(location.hostname)} is attempting to ${actionText} a credential, continue?</div>
+          <div style="color:#a9b2c3;font-size:14px;white-space:normal;overflow-wrap:anywhere;overflow:hidden;text-overflow:ellipsis;" data-v="message"></div>
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button data-action="allow" style="padding:6px 10px;border-radius:6px;border:none;background:#2b7cff;color:#fff;cursor:pointer;font:inherit;font-size:15px;font-weight:600;">✓</button>
@@ -1029,6 +1032,7 @@
           <button data-action="deny" style="padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.06);color:#a9b2c3;cursor:pointer;font:inherit;font-size:15px;">✕</button>
         </div>
       `;
+      notification.querySelector('[data-v="message"]').textContent = `${location.hostname} is attempting to ${actionText} a credential, continue?`;
 
       container.appendChild(notification);
 
@@ -1621,7 +1625,7 @@
     function renderList() {
       const records = memory.vault?.records || [];
       updateStatus(`${memory.unlocked ? STATUS.UNLOCKED : STATUS.LOCKED} · ${records.length} passkey(s) stored`);
-      listEl.innerHTML = '';
+      listEl.childNodes.forEach((x) => x.remove());
       if (!records.length) {
         const empty = document.createElement('div');
         empty.className = 'record';
@@ -1661,12 +1665,19 @@
 
         const meta = document.createElement('div');
         meta.className = 'record-meta';
-        meta.innerHTML = [
-          `Credential ID: ${escapeText(record.credentialId)}`,
-          `Origin: ${escapeText(record.origin)}`,
+        meta.style.whiteSpace = 'pre';
+        meta.style.fontSize = '12px';
+        meta.style.color = '#a9b2c3';
+        [
+          `Credential ID: ${record.credentialId}`,
+          `Origin: ${record.origin}`,
           `Counter: ${record.counter >>> 0}`,
           `Created: ${formatDate(record.createdAt)}`,
-        ].map((line) => `<div>${line}</div>`).join('');
+        ].forEach((line) => {
+          const div = document.createElement('div');
+          div.textContent = line;
+          meta.appendChild(div);
+        });
 
         item.appendChild(top);
         item.appendChild(meta);
@@ -1807,10 +1818,21 @@
           const btn = document.createElement('button');
           btn.type = 'button';
           btn.style.cssText = 'text-align:left; padding:12px; border-radius:12px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:#e7eaf0; cursor:pointer;';
-          btn.innerHTML = `
-            <div style="font-weight:700; margin-bottom:4px;">${escapeText(record.user?.displayName || record.user?.name || 'Unnamed user')} · ${escapeText(record.rpId)}</div>
-            <div style="font-size:12px; color:#a9b2c3; word-break:break-all;">${escapeText(record.credentialId)}</div>
-          `;
+          
+          const titleDiv = document.createElement('div');
+          titleDiv.style.fontWeight = '700';
+          titleDiv.style.marginBottom = '4px';
+          titleDiv.textContent = `${record.user?.displayName || record.user?.name || 'Unnamed user'} · ${record.rpId}`;
+          
+          const subtitleDiv = document.createElement('div');
+          subtitleDiv.style.fontSize = '12px';
+          subtitleDiv.style.color = '#a9b2c3';
+          subtitleDiv.style.wordBreak = 'break-all';
+          subtitleDiv.textContent = record.credentialId;
+          
+          btn.appendChild(titleDiv);
+          btn.appendChild(subtitleDiv);
+          
           btn.addEventListener('click', () => {
             closeAndCleanup();
             onUseVault(record);
