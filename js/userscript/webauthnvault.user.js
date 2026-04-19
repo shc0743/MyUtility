@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WebAuthn Virtual Authenticator Vault
 // @namespace    https://utility.clspd.top/go.html?product=webauthnvault
-// @version      1.1.0
+// @version      1.1.1
 // @description  A local WebAuthn virtual authenticator vault for userscript managers.
 // @match        https://*/*
 // @require      https://unpkg.com/add-css-constructed@1.1.3/dist/umd.js#sha256-d0FJH11iwMemcFgueP8rpxVl9RdFyd3V8WJXX9SmB5I=
@@ -1680,7 +1680,7 @@
     function renderList() {
       const records = memory.vault?.records || [];
       updateStatus(`${memory.unlocked ? STATUS.UNLOCKED : STATUS.LOCKED} · ${records.length} passkey(s) stored`);
-      listEl.childNodes.forEach((x) => x.remove());
+      listEl.replaceChildren();
       if (!records.length) {
         const empty = document.createElement('div');
         empty.className = 'record';
