@@ -33,7 +33,8 @@ BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")  # �
 API_KEY_PATH = Path(os.environ.get("API_KEY_PATH", "/data/data/com.termux/files/home/skapikey.txt"))
 EXEC_FILTER = os.environ.get('DSNATIVE2_EXEC_FILTER', None)
 EXEC_RUNNER = os.environ.get('DSNATIVE2_EXEC_RUNNER', None)
-DEFAULT_MODEL = "deepseek-reasoner"  # 替换为你要用的模型标识
+DEFAULT_MODEL = os.environ.get('DSNATIVE2_DEFAULT_MODEL', "deepseek-v4-pro")
+_current_model = DEFAULT_MODEL  # 可在运行时通过 /model 切换
 TIMEOUT = 600
 TIMING_ENABLED = True
 
@@ -227,7 +228,7 @@ def call_deepseek(messages):
         "Content-Type": "application/json",
     }
     payload = {
-        "model": DEFAULT_MODEL,
+        "model": _current_model,
         "messages": messages,
         "tools": TOOLS,
         "thinking": {"type": "enabled"}
@@ -243,7 +244,7 @@ def stream_deepseek(messages):
         "Content-Type": "application/json",
     }
     payload = {
-        "model": DEFAULT_MODEL,
+        "model": _current_model,
         "messages": messages,
         "tools": TOOLS,
         "stream": True,
@@ -424,7 +425,7 @@ def repl(session_path=None, load_path=None):
     
     print("DeepSeek Agent REPL (PoC).")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT]")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL]")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     if EXEC_FILTER:
         print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
@@ -545,8 +546,16 @@ def repl(session_path=None, load_path=None):
                 messages[0] = build_system_message(str(virtual_root))
                 print(f"已设置虚拟根：{virtual_root}")
                 continue
+            elif cmd == "/model":
+                global _current_model
+                if not arg:
+                    print(f"当前模型: {_current_model}")
+                else:
+                    _current_model = arg.strip()
+                    print(f"已切换模型为: {_current_model}")
+                continue
             else:
-                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot")
+                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot, /model")
                 continue
         else:
             # Normal user input: send as user message
@@ -568,7 +577,10 @@ def repl(session_path=None, load_path=None):
         
             try:
                 for chunk in stream_deepseek(messages):
-                    render_stream_chunk(chunk)
+                    try:
+                        render_stream_chunk(chunk)
+                    except KeyboardInterrupt:
+                        print(f"\n{C.RED}用户中断{C.RESET}")
         
                     delta = chunk["choices"][0].get("delta", None)
                     if not delta:
@@ -620,7 +632,7 @@ def repl(session_path=None, load_path=None):
                             traceback.print_exc()
                             continue
 
-            except Exception as e:
+            except BaseException as e:
                 print(f"\n[ERROR] 调用 DeepSeek 接口失败")
                 import traceback
                 traceback.print_exc()
@@ -678,25 +690,47 @@ def repl(session_path=None, load_path=None):
             
             # ---- process each tool call ----
             has_excep = False
+            current_tool_index = 0
+            total_tools = len(tool_calls)
+            if total_tools > 1:
+                print(f"\n{C.YELLOW}模型想要执行多个命令！{C.RESET}")
+                for tool in tool_calls:
+                    current_tool_index += 1
+                    try:
+                        func_name = tool.get("function", {}).get("name")
+                        args_raw = tool.get("function", {}).get("arguments", "{}")
+                        try:
+                            args = json.loads(args_raw)
+                        except Exception:
+                            args = {"command": args_raw}
+                        command = args.get("command", args.get("path", ""))
+                        print(f"{current_tool_index}. {'切换目录' if func_name == 'change_dir' else '执行命令'}: {command}")
+                    except Exception as e:
+                        print(f"{current_tool_index}. {e}")
+                print('--------')
+            current_tool_index = 0
             for tool in tool_calls:
+                current_tool_index += 1
                 try:
                     func_name = tool.get("function", {}).get("name")
                     args_raw = tool.get("function", {}).get("arguments", "{}")
-            
+
                     try:
                         args = json.loads(args_raw)
                     except Exception:
                         args = {"command": args_raw}
-            
+
                     command = args.get("command", args.get("path", ""))
             
-                    print(f"{C.YELLOW}\n模型请求执行命令 (tool={func_name}):\n>>> {command}{C.RESET}\n")
+                    print(f"{C.YELLOW}\n{(f"[{current_tool_index}/{total_tools}] ") if total_tools > 1 else ''}模型请求{'切换目录' if func_name == 'change_dir' else '执行命令'}:\n>>> {command}{C.RESET}\n")
                     stripped = command.strip()
                     # if stripped.startswith("cd ") or stripped == "cd":
                         # yn = 'y'
                         # print("自动执行cd命令。")
                     # else:
-                    if True:
+                    if func_name == 'change_dir':
+                        yn = input(f"是否切换目录？ (y:切换 / n:不切换 / s:跳过并返回空结果 / t:y / e:y / r:y) ").strip()
+                    else:
                         yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行) ").strip()
                     if yn.lower() not in ("y", "n", "s", "t", "e", "r"):
                         print("将把自定义消息传递给模型。")
