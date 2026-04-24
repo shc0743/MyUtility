@@ -36,7 +36,7 @@ EXEC_RUNNER = os.environ.get('DSNATIVE2_EXEC_RUNNER', None)
 DEFAULT_MODEL = os.environ.get('DSNATIVE2_DEFAULT_MODEL', "deepseek-v4-pro")
 _current_model = DEFAULT_MODEL  # 可在运行时通过 /model 切换
 TIMEOUT = 600
-TIMING_ENABLED = True
+TIMING_ENABLED = False if (os.environ.get('DSNATIVE2_DISABLE_TIMING', None) == 'true') else True
 
 class C:
     RESET = "\033[0m"
@@ -679,8 +679,8 @@ def repl(session_path=None, load_path=None):
             # 追加 assistant 消息（让模型能在下一轮继续）
             messages.append({
                 "role": "assistant",
-                **({ "reasoning_content": collected_message["reasoning_content"] }
-                   if collected_message["reasoning_content"] else {}),
+                "reasoning_content": collected_message["reasoning_content"]
+                   if collected_message["reasoning_content"] else "",
                 "content": collected_message["content"]
                    if collected_message["content"] else "",
                 **({ "tool_calls": tool_calls }
@@ -784,7 +784,7 @@ def repl(session_path=None, load_path=None):
                             if len(result_str) > MAX_CHARS:
                                 result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
             
-                            print(f"{C.DIM}命令执行返回（前{current_truncate_val}字符）:\n{result_str[:current_truncate_val]}{C.RESET}\n")
+                            print(f"{C.DIM}命令执行返回（前{current_truncate_val+200}字符）:\n{result_str[:current_truncate_val+200]}{C.RESET}\n")
                             
                     else:
                         result_str = f"<user rejected execution and replied>\n{yn}"
