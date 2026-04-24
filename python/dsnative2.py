@@ -425,7 +425,7 @@ def repl(session_path=None, load_path=None):
     
     print("DeepSeek Agent REPL (PoC).")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL]")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"]")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     if EXEC_FILTER:
         print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
@@ -551,7 +551,13 @@ def repl(session_path=None, load_path=None):
                 if not arg:
                     print(f"当前模型: {_current_model}")
                 else:
-                    _current_model = arg.strip()
+                    newVal = arg.strip()
+                    if newVal == 'pro':
+                        _current_model = 'deepseek-v4-pro'
+                    elif newVal == 'flash':
+                        _current_model = 'deepseek-v4-flash'
+                    else:
+                        _current_model = newVal
                     print(f"已切换模型为: {_current_model}")
                 continue
             else:
@@ -729,7 +735,7 @@ def repl(session_path=None, load_path=None):
                         # print("自动执行cd命令。")
                     # else:
                     if func_name == 'change_dir':
-                        yn = input(f"是否切换目录？ (y:切换 / n:不切换 / s:跳过并返回空结果 / t:y / e:y / r:y) ").strip()
+                        yn = input(f"是否切换目录？ (y:切换 / n:不切换 / s:跳过并返回空结果 / t:与y相同 / e:与y相同 / r:与y相同) ").strip()
                     else:
                         yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行) ").strip()
                     if yn.lower() not in ("y", "n", "s", "t", "e", "r"):
@@ -774,11 +780,11 @@ def repl(session_path=None, load_path=None):
                             except Exception as e:
                                 result_str += f"<exec failed: {e}>"
 
-                            MAX_CHARS = 200000
+                            MAX_CHARS = 1000000
                             if len(result_str) > MAX_CHARS:
                                 result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
             
-                            print(f"{C.DIM}命令执行返回（前10000字符）:\n{result_str[:10000]}{C.RESET}\n")
+                            print(f"{C.DIM}命令执行返回（前{current_truncate_val}字符）:\n{result_str[:current_truncate_val]}{C.RESET}\n")
                             
                     else:
                         result_str = f"<user rejected execution and replied>\n{yn}"
