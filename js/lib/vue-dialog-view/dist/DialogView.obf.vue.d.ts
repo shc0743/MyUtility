@@ -5,20 +5,15 @@ interface Props {
     closable?: boolean;
     closeOnClickMask?: boolean;
 }
-declare function __VLS_template(): {
-    attrs: Partial<{}>;
-    slots: {
-        title?(_: {}): any;
-        default?(_: {}): any;
-        footer?(_: {}): any;
-    };
-    refs: {
-        dialogRef: HTMLDialogElement;
-    };
-    rootEl: HTMLDialogElement;
+declare var __VLS_1: {}, __VLS_3: {}, __VLS_5: {};
+type __VLS_Slots = {} & {
+    title?: (props: typeof __VLS_1) => any;
+} & {
+    default?: (props: typeof __VLS_3) => any;
+} & {
+    footer?: (props: typeof __VLS_5) => any;
 };
-type __VLS_TemplateResult = ReturnType<typeof __VLS_template>;
-declare const __VLS_component: import('vue').DefineComponent<Props, {
+declare const __VLS_base: import('vue').DefineComponent<Props, {
     get: () => HTMLDialogElement | undefined;
     open: () => void;
     close: () => void;
@@ -33,12 +28,11 @@ declare const __VLS_component: import('vue').DefineComponent<Props, {
     showCloseButton: boolean;
     closable: boolean;
     closeOnClickMask: boolean;
-}, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {
-    dialogRef: HTMLDialogElement;
-}, HTMLDialogElement>;
-declare const _default: __VLS_WithTemplateSlots<typeof __VLS_component, __VLS_TemplateResult["slots"]>;
+}, {}, {}, {}, string, import('vue').ComponentProvideOptions, false, {}, any>;
+declare const __VLS_export: __VLS_WithSlots<typeof __VLS_base, __VLS_Slots>;
+declare const _default: typeof __VLS_export;
 export default _default;
-type __VLS_WithTemplateSlots<T, S> = T & {
+type __VLS_WithSlots<T, S> = T & {
     new (): {
         $slots: S;
     };

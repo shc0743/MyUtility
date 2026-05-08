@@ -1,6 +1,6 @@
 {
     "name": "vue-dialog-view",
-    "version": "1.8.3",
+    "version": "1.8.4",
     "description": "A modern Vue 3 dialog component using native dialog element",
     "type": "module",
     "main": "./dist/dialog-view.umd.js",
@@ -19,20 +19,22 @@
             "require": "./dist/unobfuscated.umd.js"
         },
         "./cssless": {
-            "types": "./dist/cssless.d.ts",
+            "types": "./dist/unobfuscated.d.ts",
             "import": "./dist/cssless.es.js",
             "require": "./dist/cssless.umd.js"
         },
         "./cssless-obfuscated": {
-            "types": "./dist/cssless-obfuscated.d.ts",
+            "types": "./dist/index.d.ts",
             "import": "./dist/cssless-obfuscated.es.js",
             "require": "./dist/cssless-obfuscated.umd.js"
         },
         "./style": {
-            "default": "./dist/vue-dialog-view.css"
+            "default": "./dist/vue-dialog-view.css",
+            "types": "./src/style.d.ts"
         },
         "./style-obfuscated": {
-            "default": "./dist/vue-dialog-view-obfuscated.css"
+            "default": "./dist/vue-dialog-view-obfuscated.css",
+            "types": "./src/style.d.ts"
         }
     },
     "files": [
@@ -61,14 +63,14 @@
         "vue": "^3.3.0"
     },
     "devDependencies": {
-        "@vitejs/plugin-vue": "^6.0.5",
+        "@vitejs/plugin-vue": "^6.0.6",
         "rimraf": "^6.1.3",
         "typescript": "^5.9.3",
-        "vite": "^7.3.1",
-        "vite-plugin-css-injected-by-js": "^4.0.1",
-        "vite-plugin-dts": "^1.0.5",
-        "vue": "^3.5.30",
-        "vue-tsc": "^3.1.1"
+        "vite": "^8.0.11",
+        "vite-plugin-css-injected-by-js": "^5.0.1",
+        "vite-plugin-dts": "^5.0.0",
+        "vue": "^3.5.34",
+        "vue-tsc": "^3.2.8"
     },
     "keywords": [
         "front-end",
