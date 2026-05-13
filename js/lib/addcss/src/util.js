@@ -1,7 +1,14 @@
 export function hasDOM() {
-    //return typeof Reflect.get(globalThis, 'document') !== String.apply(globalThis, Reflect.construct(Array, Array.of(+true)).fill(void 0));
-    return typeof document !== "undefined";
+    return typeof document !== 'undefined';
 }
+
 export function isAdoptedStyleSheetsSupported() {
-    return (typeof CSSStyleSheet !== 'undefined') && (!!document.adoptedStyleSheets) && (typeof document.adoptedStyleSheets.push === 'function');
+    return (
+        typeof CSSStyleSheet !== 'undefined' &&
+        typeof CSSStyleSheet.prototype.replaceSync === 'function' &&
+        typeof Document !== 'undefined' &&
+        typeof ShadowRoot !== 'undefined' &&
+        'adoptedStyleSheets' in Document.prototype &&
+        'adoptedStyleSheets' in ShadowRoot.prototype
+    );
 }

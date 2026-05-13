@@ -1,35 +1,50 @@
 /**
- * Check if DOM environment is available
- * @returns {boolean} True if DOM is available
+ * Check if DOM environment is available.
  */
 export declare function hasDOM(): boolean;
 
 /**
- * Check if adoptedStyleSheets API is supported
- * @returns {boolean} True if adoptedStyleSheets is supported
+ * Check if constructable/adopted stylesheets are supported.
  */
 export declare function isAdoptedStyleSheetsSupported(): boolean;
 
-export interface RemovableCSSStyleSheet extends CSSStyleSheet {
-    remove(): boolean;
+export type CSSStorage = CSSStyleSheet | HTMLStyleElement;
+
+/**
+ * Lightweight wrapper around CSSStyleSheet / <style> fallback.
+ */
+export declare class CSSSheet {
+    _cssText: string;
+    _sheet: CSSStorage | null;
+    _style_elem_list: WeakMap<Document | ShadowRoot, HTMLStyleElement>;
+
+    constructor(css_code: string);
+
+    attach(target?: Document | ShadowRoot | null): Document | ShadowRoot;
+    detach(target: Document | ShadowRoot): boolean;
+    get(): CSSStorage;
 }
 
 /**
- * Add CSS styles to document or shadow root
- * @param {string} css_code - CSS code string
- * @param {Document|ShadowRoot|null} [target] - Target element (document or shadow root), defaults to document
- * @returns {CSSStyleSheet|HTMLStyleElement} The added stylesheet or style element
- * @throws {Error} When no DOM is detected and no target provided
+ * Create a CSSSheet wrapper.
  */
-export declare function addCSS(css_code: string, target?: Document | ShadowRoot | null): RemovableCSSStyleSheet | HTMLStyleElement;
+export declare function createCSS(css_code: string): CSSSheet;
 
-/*
-Removes a CSS style sheet fron document or specified target
-*/
+/**
+ * Add CSS styles to document or shadow root.
+ * Returns the created CSSSheet wrapper.
+ */
+export declare function addCSS(
+    css_code: string,
+    target?: Document | ShadowRoot | null
+): CSSSheet;
+
+/**
+ * Remove CSS from a target.
+ */
 export declare function removeCSS(
-    stylesheet: CSSStyleSheet | HTMLStyleElement, 
+    stylesheet: CSSSheet | CSSStyleSheet | HTMLStyleElement,
     target?: Document | ShadowRoot | null
 ): boolean;
 
-export { addCSS as default }
-
+export { addCSS as default };
