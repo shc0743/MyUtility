@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         bh3helper-enhancer
 // @namespace    4b8b542a-3500-49bd-b857-8d62413434c7
-// @version      1.4.8
+// @version      1.5.0
 // @description  在bh3helper（《崩坏3》剧情助手）上提供增强功能
 // @author       -
 // @match        https://bh3helper.xrysnow.xyz/*
@@ -159,10 +159,12 @@
 
     if (state.search_maxResultCount && window.location.pathname === '/pages/search.html') {
         window.SearchScriptEx = function () {
+            Util.removeLoadingHint();
             Util.setPageBackground();
             const searchPage = new SearchPage();
             searchPage.updateMaxResultCount(state.search_maxResultCount);
             searchPage.make();
+            var e = document.getElementById("main-content"); e && (e.style.display = "block");
         };
     } // 这一步会在document-start执行
 
@@ -698,6 +700,7 @@ details[open] > .dlg-help-summary::before {
             data() {
                 return {
                     page: window.location.pathname,
+                    isLoaded: false,
                     showPanel: true,
                     promptText: '',
                     promptInput: '',
@@ -772,7 +775,7 @@ details[open] > .dlg-help-summary::before {
                     return this.page === '/';
                 },
                 isStoryPage() {
-                    return this.page === '/pages/common.html' && !isNaN(this.commonid) && checkIdInRange(this.commonid, CONFIG.STORY_PAGE_RANGE);
+                    return this.page === '/pages/common.html' && !isNaN(this.commonid) && (checkIdInRange(this.commonid, CONFIG.STORY_PAGE_RANGE) || (this.isLoaded && isStoryAvailable(this.commonid)));
                 },
                 isSearchPage() {
                     return this.page === '/pages/search.html';
@@ -1011,6 +1014,7 @@ details[open] > .dlg-help-summary::before {
         }
     }); // 从这里开始执行时机都是load事件之后了
     postLoadMessage();
+    ui.vm.isLoaded = true;
     if (state.PJMS_NICKNAME) applyPjmsNicknamePatch();
     
     // ---------- //
@@ -1757,6 +1761,17 @@ details[open] > .dlg-help-summary::before {
                             }
                         ]
                     },
+                    {
+                        id: 'other-event',
+                        label: '主题活动',
+                        nodes: [
+                            {
+                                id: 'event-content',
+                                label: '主题活动',
+                                nodes: [],
+                            }
+                        ]
+                    },
                 ]
             },
         ];
@@ -1863,6 +1878,37 @@ details[open] > .dlg-help-summary::before {
                 leaf: true,
             });
         }
+        
+        // 添加主题活动资源，被塞在 StoryTextReviewSection.AvailableChapters 里面
+        try {
+            const ids = StoryTextReviewSection.AvailableChapters.map(i => +i);
+            const events = ids.filter(i => checkIdInRange(i, [[5000, 5999]]));
+            const ed = EventData, id2evt = new Map();
+            // 从 EventData 里面找出 title
+            // 这里得 hack ，网站数据质量一言难尽居然没有id到text的关联。。。
+            for (const i of ed) {
+                /* 示例：
+                {
+                    "data": ["繁星旅航：反击战", "7.1", 20231109],
+                    "cover": ["7.1.jpg"],
+                    "coverWallpaper": "https://act-upload.mihoyo.com/bh3-wiki/2023/11/20/75216984/c0ed90a921fd144a8d3aa2715ed07d3c_6633050215304409608.png",
+                    "record": "BV15w411x7rK",
+                    "duration": [0, 120],
+                    "wordCount": 34769,
+                    "recommend": true
+                }
+                */
+                const id = i.data[1].replaceAll('.', ''); // 😓别怪我硬拼字符串。。谁让他没给个id关联
+                id2evt.set(+('50' + id), i.data[0]);
+            }
+            for (const i of events) {
+                tree[2].nodes[1].nodes[0].nodes.push({
+                    id: i,
+                    label: id2evt.get(i),
+                    leaf: true,
+                });
+            }
+        } catch {}
 
         const processTree = (nodes) => {
             for (const node of nodes) {
@@ -1902,6 +1948,12 @@ details[open] > .dlg-help-summary::before {
         } catch (error) {
             console.warn('[bh3helper-downloader] Unable to patch nickname:', error);
         }
+    }
+    
+    function isStoryAvailable(id) {
+        try {
+            return !!StoryTextReviewSection.isAvailable(String(id))
+        } catch { return false }
     }
 
     const extractNodeText_unityRichTextTagMap = {
