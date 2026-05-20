@@ -45,6 +45,8 @@ class C:
     NORMAL = "\033[39m"     # 默认文本
     BOLD = "\033[1m"
     RED = "\033[31m"
+    GREEN = "\033[32m"
+    DIM_RED = "\033[2;31m"  # 淡红（警告）
 
 # ========== Read API Key ==========
 def read_api_key():
@@ -101,6 +103,43 @@ TOOLS = [
                     }
                 },
                 "required": ["path"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "edit_file",
+            "description": "Edit/modify a **EXISTING** file with various operations. For append/prepend/replace: specify 'find' and 'data'. Use 'context' to narrow down ambiguous matches. Use 'count' to explicitly specify expected match count. For overwrite: only 'data' is required.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "description": "Path to the file to edit (relative or absolute)."
+                    },
+                    "type": {
+                        "type": "string",
+                        "description": "Operation type: 'append' (insert data after find), 'prepend' (insert data before find), 'replace' (replace find with data), 'overwrite' (replace entire file content with data)."
+                    },
+                    "find": {
+                        "type": "string",
+                        "description": "The text pattern to find in the file. Required for append/prepend/replace. Not needed for overwrite."
+                    },
+                    "context": {
+                        "type": "string",
+                        "description": "Optional context string containing 'find' to narrow down ambiguous matches. When specified, first locate context matches, then apply the operation on 'find' within each context match."
+                    },
+                    "data": {
+                        "type": "string",
+                        "description": "The new value to insert/replace with."
+                    },
+                    "count": {
+                        "type": "number",
+                        "description": "Expected number of matches. Default is 1. If actual matches differ from this count, the operation fails with an error suggesting to use context or exact count."
+                    }
+                },
+                "required": ["file", "type", "data"]
             }
         }
     }
@@ -293,23 +332,73 @@ def execute_subprocess(command, cwd):
     Execute the command in a subprocess, capture stdout/stderr.
     - On Unix we will use bash -lc to allow typical shell syntax.
     - On Windows we let subprocess use shell=True (cmd.exe).
+    - Streams output to console in real-time via threads.
+    - Enforces a safety buffer limit (1M chars) to prevent OOM.
     """
     global current_truncate_val
     global EXEC_RUNNER
+    import threading
+
+    SAFETY_LIMIT = 1000000
+
     try:
         timingapidata = ""
         startTime = time.time()
+
+        popen_kwargs = dict(
+            shell=True, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, errors='replace', cwd=str(cwd)
+        )
         if EXEC_RUNNER:
-            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace', cwd=str(cwd), executable=EXEC_RUNNER)
-        elif IS_WINDOWS:
-            # Windows: shell via cmd.exe
-            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace', cwd=str(cwd))
-        else:
-            # Unix: use bash -lc for better POSIX compatibility
-            proc = subprocess.run(command, shell=True, stdin=subprocess.DEVNULL, capture_output=True, text=True, errors='replace', cwd=str(cwd), executable="/bin/bash")
-        out = proc.stdout or ""
-        err = proc.stderr or ""
+            popen_kwargs['executable'] = EXEC_RUNNER
+        elif not IS_WINDOWS:
+            popen_kwargs['executable'] = "/bin/bash"
+
+        proc = subprocess.Popen(command, **popen_kwargs)
+
+        # Shared state between reader threads
+        state = {
+            'out_parts': [],
+            'err_parts': [],
+            'out_collected': 0,
+            'err_collected': 0,
+            'out_total': 0,
+            'err_total': 0,
+            'lock': threading.Lock(),
+        }
+
+        def read_stream(stream, parts_key, collected_key, total_key):
+            for line in iter(stream.readline, ''):
+                print(line, end='', flush=True)
+                with state['lock']:
+                    state[total_key] += len(line)
+                    collected = state[collected_key]
+                    if collected < SAFETY_LIMIT:
+                        room = SAFETY_LIMIT - collected
+                        if len(line) <= room:
+                            state[parts_key].append(line)
+                            state[collected_key] = collected + len(line)
+                        else:
+                            state[parts_key].append(line[:room])
+                            state[collected_key] = SAFETY_LIMIT
+            stream.close()
+
+        t1 = threading.Thread(target=read_stream,
+            args=(proc.stdout, 'out_parts', 'out_collected', 'out_total'))
+        t2 = threading.Thread(target=read_stream,
+            args=(proc.stderr, 'err_parts', 'err_collected', 'err_total'))
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+        proc.wait()
+
         rc = proc.returncode
+
+        out = "".join(state['out_parts'])
+        err = "".join(state['err_parts'])
+
         combined = ""
         if out:
             combined += out
@@ -318,8 +407,17 @@ def execute_subprocess(command, cwd):
         combined = combined.strip()
         if combined == "":
             combined = f"<no output> (returncode={rc})"
+
+        # Compute total bytes read vs collected (for accurate truncation count)
+        total_read = state['out_total'] + state['err_total']
+        total_collected = state['out_collected'] + state['err_collected']
+        internal_dropped = total_read - total_collected
+
         if len(combined) > current_truncate_val:
-            combined = combined[:current_truncate_val] + f"[[TRUNCATED {len(combined) - current_truncate_val} chars]]"
+            truncated_amount = (len(combined) - current_truncate_val) + internal_dropped
+            combined = combined[:current_truncate_val] + \
+                f"[[TRUNCATED {truncated_amount} chars]]"
+
         if TIMING_ENABLED:
             timedata = {
                 "elapsed": int(1000 * (time.time() - startTime)) / 1000,
@@ -335,13 +433,283 @@ def execute_subprocess(command, cwd):
     except Exception as e:
         return f"Error occurred while executing command: {e}"
 
+# ========== Tool Handlers ==========
+
+def tool_edit_file(args, cwd, virtual_root):
+    """
+    Edit a file with append/prepend/replace/overwrite operations.
+    Returns result string.
+    """
+    file = args.get("file", "")
+    op_type = args.get("type", "")
+    find = args.get("find", None)
+    context = args.get("context", None)
+    data = args.get("data", "")
+    count = args.get("count", 1)
+
+    # Validate parameters
+    if not file:
+        return "<error: 'file' parameter is required>"
+    if not op_type:
+        return "<error: 'type' parameter is required>"
+    if op_type not in ("append", "prepend", "replace", "overwrite"):
+        return f"<error: invalid type '{op_type}', must be one of: append, prepend, replace, overwrite>"
+    if op_type != "overwrite" and not find:
+        return f"<error: 'find' parameter is required for type '{op_type}'>"
+    if not isinstance(data, str):
+        return "<error: 'data' must be a string>"
+    if not isinstance(count, int) or count < 1:
+        return "<error: 'count' must be a positive integer>"
+
+    # Resolve file path
+    file_path = Path(file)
+    if not file_path.is_absolute():
+        file_path = (cwd / file_path).resolve()
+    else:
+        file_path = file_path.resolve()
+
+    # Check virtual root
+    if not is_within_root(file_path, virtual_root):
+        return f"<edit_file denied: {file_path} is outside virtual root {virtual_root}>"
+
+    if not file_path.exists():
+        return f"<error: file '{file_path}' does not exist>"
+
+    if not file_path.is_file():
+        return f"<error: '{file_path}' is not a file>"
+
+    try:
+        content = file_path.read_text(encoding='utf-8')
+    except Exception as e:
+        return f"<error: cannot read file '{file_path}': {e}>"
+
+    # Overwrite: replace entire file content
+    if op_type == "overwrite":
+        try:
+            file_path.write_text(data, encoding='utf-8')
+            return f"<file overwritten: {file_path}>"
+        except Exception as e:
+            return f"<error: cannot write file '{file_path}': {e}>"
+
+    # For append/prepend/replace, find matches and apply
+    if context:
+        # Use context to narrow down matches
+        context_count = content.count(context)
+        if context_count == 0:
+            return f"<error: context pattern not found in file>"
+        if context_count != count:
+            return (
+                f"Error: Ambiguous edit operation. Details:\n"
+                f"Context pattern has {context_count} matches. "
+                f"Please use a more precise context argument to narrow down the match. "
+                f"If you believe that all {context_count} matches should be updated, "
+                f"please specify count: {context_count}."
+            )
+
+        # Within each context match, find 'find' and apply operation
+        result_parts = []
+        last_end = 0
+        search_start = 0
+        while True:
+            idx = content.find(context, search_start)
+            if idx == -1:
+                break
+            result_parts.append(content[last_end:idx])
+            ctx_text = content[idx:idx + len(context)]
+
+            # Find 'find' within this context occurrence (first match only)
+            find_idx = ctx_text.find(find)
+            if find_idx == -1:
+                return f"<error: find pattern not found within context at position {idx}>"
+
+            if op_type == "replace":
+                new_ctx = ctx_text[:find_idx] + data + ctx_text[find_idx + len(find):]
+            elif op_type == "append":
+                new_ctx = ctx_text[:find_idx + len(find)] + data + ctx_text[find_idx + len(find):]
+            elif op_type == "prepend":
+                new_ctx = ctx_text[:find_idx] + data + ctx_text[find_idx:]
+
+            result_parts.append(new_ctx)
+            last_end = idx + len(context)
+            search_start = last_end
+
+        result_parts.append(content[last_end:])
+        new_content = "".join(result_parts)
+    else:
+        # Direct find (no context)
+        find_count = content.count(find)
+        if find_count == 0:
+            return f"<error: find pattern not found in file>"
+        if find_count != count:
+            return (
+                f"Error: Ambiguous edit operation. Details:\n"
+                f"Find pattern has {find_count} matches. "
+                f"Please use context argument to specify the context. "
+                f"If you believe that all the matches should be updated, "
+                f"please specify the exact count (currently {count}, actual {find_count})."
+            )
+
+        result_parts = []
+        last_end = 0
+        search_start = 0
+        while True:
+            idx = content.find(find, search_start)
+            if idx == -1:
+                break
+            result_parts.append(content[last_end:idx])
+
+            if op_type == "replace":
+                result_parts.append(data)
+            elif op_type == "append":
+                result_parts.append(content[idx:idx + len(find)] + data)
+            elif op_type == "prepend":
+                result_parts.append(data + content[idx:idx + len(find)])
+
+            last_end = idx + len(find)
+            search_start = last_end
+
+        result_parts.append(content[last_end:])
+        new_content = "".join(result_parts)
+
+    try:
+        file_path.write_text(new_content, encoding='utf-8')
+        return f"<file edited: {file_path}, type={op_type}, matches={count}>"
+    except Exception as e:
+        return f"<error: cannot write file '{file_path}': {e}>"
+
+
+def tool_execute_command(args, cwd, sub_action):
+    """
+    Execute a shell command. Handles special sub_actions: e (edit), r (raw).
+    For 't' (truncate), the global current_truncate_val is already updated by caller.
+    For 'y', executes normally.
+    Returns result string.
+    """
+    command = args.get("command", "")
+    result = ""
+
+    if sub_action == 'e':
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode='w+', suffix='.sh', delete=True) as tmp:
+            tmp.write(command)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+            subprocess.run(['vim', tmp.name])
+            tmp.seek(0)
+            command = tmp.read()
+        result = f"<user edited the command>\nNew command is as follows:\n{command}\n\n---\n"
+    elif sub_action == 'r':
+        if "old" in args:
+            command = args.pop("old")
+
+    result += execute_subprocess(command, cwd)
+    return result
+
+
+# Tool display names for user prompts
+TOOL_DISPLAY = {
+    "execute_command": "执行命令",
+    "change_dir": "切换目录",
+    "edit_file": "编辑文件",
+}
+
+# Approval prompts per tool
+TOOL_APPROVAL_PROMPTS = {
+    "execute_command": "是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行)",
+    "change_dir": "是否切换目录？ (y:切换 / n:不切换 / s:跳过并返回空结果)",
+    "edit_file": "是否编辑该文件？ (y:编辑 / n:不编辑 / s:跳过并返回空结果)",
+}
+
+# Valid yes-like actions per tool
+TOOL_YES_ACTIONS = {
+    "execute_command": ("y", "t", "e", "r"),
+    "change_dir": ("y", "t", "e", "r"),
+    "edit_file": ("y",),
+}
+
+
+def parse_tool_args(tool):
+    """Parse tool call arguments. Returns (func_name, args_dict)."""
+    func_name = tool.get("function", {}).get("name")
+    args_raw = tool.get("function", {}).get("arguments", "{}")
+    try:
+        args = json.loads(args_raw)
+    except Exception:
+        if func_name == "edit_file":
+            print(f"{C.DIM_RED}[警告] edit_file 参数 JSON 解析失败，原始内容如下:\n"
+                  f"{args_raw}\n--- 警告结束 ---{C.RESET}")
+        args = {"command": args_raw}
+    return func_name, args
+
+
+def format_edit_desc(args):
+    """Format a user-friendly edit_file description with color-coded changes."""
+    file = args.get('file', '?')
+    op = args.get('type', '?')
+    find = args.get('find', '')
+    ctx = args.get('context', '')
+    data = args.get('data', '')
+    count = args.get('count', 1)
+
+    meta = []
+    if ctx:
+        meta.append(f"context: {ctx}")
+    if count > 1:
+        meta.append(f"count: {count}")
+    meta_str = " (" + ", ".join(meta) + ")" if meta else ""
+
+    R = C.RED
+    G = C.GREEN
+    X = C.RESET
+    Y = C.YELLOW
+
+    if op == 'overwrite':
+        return f"覆盖写入 {file}（{len(data)} 字符）:\n{G}{data}{X}"
+    elif op == 'replace':
+        return (f"在 {file} 中 替换{meta_str}:\n"
+                f"--- 原文本 ---\n{R}{find}{X}\n"
+                f"--- 新文本 ---\n{G}{data}{X}")
+    elif op == 'append':
+        return (f"在 {file} 中{meta_str}，在:\n"
+                f"{Y}{find}{X}\n"
+                f"之后 插入:\n{G}{data}{X}")
+    elif op == 'prepend':
+        return (f"在 {file} 中{meta_str}，在:\n"
+                f"{Y}{find}{X}\n"
+                f"之前 插入:\n{G}{data}{X}")
+    return f"编辑 {file}: {op}"
+
+
+
+def get_tool_approval(func_name):
+    """Ask user for approval. Returns (action_key, custom_message_or_None)."""
+    prompt = TOOL_APPROVAL_PROMPTS.get(
+        func_name,
+        "是否执行？ (y:是 / n:否 / s:跳过)"
+    )
+    yn = input(prompt + " ").strip()
+    yn_lower = yn.lower()
+
+    yes_set = TOOL_YES_ACTIONS.get(func_name, ("y",))
+
+    if yn_lower == 'n':
+        return 'n', None
+    elif yn_lower == 's':
+        return 's', None
+    elif yn_lower in yes_set:
+        return yn_lower, None
+    else:
+        print("将把自定义消息传递给模型。")
+        return 'custom', yn
+
+
 # ========== REPL / Agent logic ==========
 def build_system_message(root_dir):
     return {
         "role": "system",
         "content": (
             "## System environment"
-            "\nYou are an assistant that can request execution of shell commands via a tool call named \"execute_command\". Only request the tool when you *need* to run commands. "
+            "\nYou are an assistant that can request execution of shell commands via a tool call named \"execute_command\", and edit files via \"edit_file\". Only request the tool when you *need* to run commands or modify files. "
             f"\nThe user's OS: {OS_INFO}. The shell available is '{SHELL_TYPE}'."
             "\nImportant: The client's agent "
             "enforces a virtual root (sandbox) and will deny cd outside that root. The agent will **ALWAYS** ask "
@@ -357,6 +725,13 @@ def build_system_message(root_dir):
             "\n\n## Change current directory rule"
             "\n- **Use when necessary**. If you just want to check directory content, use 'cd xxx && ls' or simply use 'ls xxx' is a better choice. However, if it is required to finish complex task, e.g. search text, edit file, etc, use 'change_dir' instead of 'cd dir && command'."
             "\n- **Never do useless things**. When changing directory, never split a simple operation. For example, if you want to change dir to '../foo/bar', do not call 'change_dir(..)', 'change_dir(foo)', then 'change_dir(bar)'. One call is enough: 'change_dir(../foo/bar)'."
+            "\n\n## File editing rule"
+            "\n- **MUST Use edit_file instead of sed for file editing**. The 'edit_file' tool provides structured file editing with append/prepend/replace/overwrite operations. FORBIDDEN using shell commands like 'sed', 'echo >' etc, unless you want to create a new file, for file modifications when edit_file can do the job. The edit_file tool can ONLY edit an EXISTING file. Trying to 'edit' a non-existing file is FORBIDDEN; you MUST create it first by using 'touch' or etc."
+            "\n- **Provide precise find strings**. The 'find' parameter must match exact file content. If the find string has multiple matches, the tool will fail with an ambiguity error. In that case, use the 'context' parameter to narrow down which match you want, or specify the exact 'count' to update all matches."
+            "\n- **Context narrows matches**. When 'context' is provided, the tool first locates context matches, then applies the operation on 'find' within each context match. This disambiguates which occurrence to edit."
+            "\n- **Count must match exactly**. If you specify count: N, the file must have exactly N matches (of find or context). If counts don't match, the operation fails. Default count is 1."
+            "\n- **Operation types**: 'replace' substitutes find with data; 'append' inserts data after find; 'prepend' inserts data before find; 'overwrite' replaces the entire file content with data (no find needed)."
+            "\n- **All edits require user approval**. Every edit_file call will be confirmed by the user before execution."
             "\n\nCommunication and interact rule"
             "\n- **Respect user privacy**. If the user does not want you to view or check something, respect user's choice. Do not try to use non-standard methods to avoid the limitation."
             "\n- **Honestly explain your limitations**. If the user expressed intention, wanting you to check what is outside the virtual filesystem, explain that you can't do it and recommend the user to start a new conversation in that directory. Do not try to avoid system limitations."
@@ -696,103 +1071,74 @@ def repl(session_path=None, load_path=None):
             
             # ---- process each tool call ----
             has_excep = False
-            current_tool_index = 0
             total_tools = len(tool_calls)
+
             if total_tools > 1:
-                print(f"\n{C.YELLOW}模型想要执行多个命令！{C.RESET}")
-                for tool in tool_calls:
-                    current_tool_index += 1
-                    try:
-                        func_name = tool.get("function", {}).get("name")
-                        args_raw = tool.get("function", {}).get("arguments", "{}")
-                        try:
-                            args = json.loads(args_raw)
-                        except Exception:
-                            args = {"command": args_raw}
-                        command = args.get("command", args.get("path", ""))
-                        print(f"{current_tool_index}. {'切换目录' if func_name == 'change_dir' else '执行命令'}: {command}")
-                    except Exception as e:
-                        print(f"{current_tool_index}. {e}")
-                print('--------')
-            current_tool_index = 0
-            for tool in tool_calls:
-                current_tool_index += 1
+                print(f"\n{C.YELLOW}模型想要执行多个操作！{C.RESET}")
+
+            for i, tool in enumerate(tool_calls):
                 try:
-                    func_name = tool.get("function", {}).get("name")
-                    args_raw = tool.get("function", {}).get("arguments", "{}")
+                    func_name, args = parse_tool_args(tool)
 
-                    try:
-                        args = json.loads(args_raw)
-                    except Exception:
-                        args = {"command": args_raw}
-
-                    command = args.get("command", args.get("path", ""))
-            
-                    print(f"{C.YELLOW}\n{(f"[{current_tool_index}/{total_tools}] ") if total_tools > 1 else ''}模型请求{'切换目录' if func_name == 'change_dir' else '执行命令'}:\n>>> {command}{C.RESET}\n")
-                    stripped = command.strip()
-                    # if stripped.startswith("cd ") or stripped == "cd":
-                        # yn = 'y'
-                        # print("自动执行cd命令。")
-                    # else:
-                    if func_name == 'change_dir':
-                        yn = input(f"是否切换目录？ (y:切换 / n:不切换 / s:跳过并返回空结果 / t:与y相同 / e:与y相同 / r:与y相同) ").strip()
+                    # Display intent (with [i/total] prefix for multi-tool)
+                    progress = f"[{i+1}/{total_tools}] " if total_tools > 1 else ""
+                    if func_name == "edit_file":
+                        print(f"{C.YELLOW}\n{progress}模型请求{format_edit_desc(args)}{C.RESET}\n")
                     else:
-                        yn = input(f"是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行) ").strip()
-                    if yn.lower() not in ("y", "n", "s", "t", "e", "r"):
-                        print("将把自定义消息传递给模型。")
-            
-                    if yn.lower() == "n":
+                        val = args.get("command", args.get("path", ""))
+                        label = TOOL_DISPLAY.get(func_name, func_name)
+                        print(f"{C.YELLOW}\n{progress}模型请求{label}:\n>>> {val}{C.RESET}\n")
+
+                    # Get user approval
+                    action, custom_msg = get_tool_approval(func_name)
+
+                    if action == 'n':
                         result_str = "<user rejected execution>"
                         print("已拒绝执行。将返回拒绝结果给模型。")
-            
-                    elif yn.lower() == "s":
+
+                    elif action == 's':
                         result_str = "<skipped by user>"
                         print("已跳过（返回跳过标记）")
-            
-                    elif yn.lower() == "y" or yn.lower() == "t" or yn.lower() == "e" or yn.lower() == "r":
-                        # if stripped.startswith("cd ") or stripped == "cd":
-                        if func_name == "change_dir":
-                            cwd, result_str = handle_cd_command(command, cwd, virtual_root)
-                            print(f"{C.DIM}{result_str}{C.RESET}")
-                        else:
-                            result_str = ""
-                            try:
-                                if yn.lower() == "t":
-                                    current_truncate_val = int(input(f"当前截断大小：{current_truncate_val}，请输入新的截断大小（务必需要是数字）: "))
-                                elif yn.lower() == "e":
-                                    import tempfile
-                                    with tempfile.NamedTemporaryFile(mode='w+', suffix='.sh', delete=True) as tmp:
-                                        tmp.write(command)
-                                        tmp.flush()
-                                        os.fsync(tmp.fileno())
-                                        subprocess.run(['vim', tmp.name])
-                                        tmp.seek(0)  # 回到文件开头
-                                        command = tmp.read()
-                                        result_str += f"<user edited the command>\nNew command is as follows:\n{command}\n\n---\n"
-                                elif yn.lower() == "r":
-                                    # 如果存在 old 字段，恢复原始命令并删除 old 字段
-                                    if "old" in args:
-                                        command = args.pop("old")  # 获取原始命令并删除 old 字段
-                                        args["command"] = command  # 更新 command 字段
-                                        tool["function"]["arguments"] = json.dumps(args)  # 同步更新
-                                    print("将要执行:", command)
-                                result_str += execute_subprocess(command, cwd)
-                            except Exception as e:
-                                result_str += f"<exec failed: {e}>"
 
-                            MAX_CHARS = 1000000
-                            if len(result_str) > MAX_CHARS:
-                                result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
-            
-                            print(f"{C.DIM}命令执行返回（前{current_truncate_val+200}字符）:\n{result_str[:current_truncate_val+200]}{C.RESET}\n")
-                            
+                    elif action == 'custom':
+                        result_str = f"<user rejected execution and replied>\n{custom_msg}"
+
                     else:
-                        result_str = f"<user rejected execution and replied>\n{yn}"
+                        # Execute approved tool
+                        try:
+                            if func_name == "execute_command":
+                                if action == 't':
+                                    global current_truncate_val
+                                    current_truncate_val = int(input(
+                                        f"当前截断大小：{current_truncate_val}，请输入新的截断大小（务必需要是数字）: "))
+                                result_str = tool_execute_command(args, cwd, action)
+                                MAX_CHARS = 1000000
+                                if len(result_str) > MAX_CHARS:
+                                    result_str = result_str[:MAX_CHARS] + "\n...[truncated]"
+                                print(f"{C.DIM}命令执行返回（前{current_truncate_val+200}字符）:"
+                                      f"\n{result_str[:current_truncate_val+200]}{C.RESET}\n")
+
+                            elif func_name == "change_dir":
+                                cwd, result_str = handle_cd_command(
+                                    args.get("path", ""), cwd, virtual_root)
+                                print(f"{C.DIM}{result_str}{C.RESET}")
+
+                            elif func_name == "edit_file":
+                                result_str = tool_edit_file(args, cwd, virtual_root)
+                                print(f"{C.DIM}{result_str}{C.RESET}")
+
+                            else:
+                                result_str = f"<error: unknown tool '{func_name}'>"
+
+                        except Exception as e:
+                            result_str = f"<exec failed: {e}>"
+
                 except Exception as e:
                     has_excep = True
                     result_str = f"Unexpected exception during executing command: {e}"
                     print(result_str)
-                # 把工具执行结果回传给模型
+
+                # Append tool result to messages
                 messages.append({
                     "role": "tool",
                     "tool_call_id": tool.get("id"),
