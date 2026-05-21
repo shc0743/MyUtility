@@ -110,7 +110,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "edit_file",
-            "description": "Edit/modify a **EXISTING** file with various operations. For append/prepend/replace: specify 'find' and 'data'. Use 'context' to narrow down ambiguous matches. Use 'count' to explicitly specify expected match count. For overwrite: only 'data' is required.",
+            "description": "Edit or create a file. Types: 'create' (new file only, fails if exists, data required), 'overwrite' (replace entire content, file must exist), 'replace' (swap find→data), 'append'/'prepend' (insert around find). Use 'context' and 'count' to disambiguate matches.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -120,11 +120,11 @@ TOOLS = [
                     },
                     "type": {
                         "type": "string",
-                        "description": "Operation type: 'append' (insert data after find), 'prepend' (insert data before find), 'replace' (replace find with data), 'overwrite' (replace entire file content with data)."
+                        "description": "Operation type: 'create' (create new file with data, fails if file exists), 'append' (insert data after find), 'prepend' (insert data before find), 'replace' (replace find with data), 'overwrite' (replace entire file content with data)."
                     },
                     "find": {
                         "type": "string",
-                        "description": "The text pattern to find in the file. Required for append/prepend/replace. Not needed for overwrite."
+                        "description": "The text pattern to find in the file. Required for append/prepend/replace. Not needed for create/overwrite."
                     },
                     "context": {
                         "type": "string",
@@ -452,9 +452,9 @@ def tool_edit_file(args, cwd, virtual_root):
         return "<error: 'file' parameter is required>"
     if not op_type:
         return "<error: 'type' parameter is required>"
-    if op_type not in ("append", "prepend", "replace", "overwrite"):
-        return f"<error: invalid type '{op_type}', must be one of: append, prepend, replace, overwrite>"
-    if op_type != "overwrite" and not find:
+    if op_type not in ("create", "append", "prepend", "replace", "overwrite"):
+        return f"<error: invalid type '{op_type}', must be one of: create, append, prepend, replace, overwrite>"
+    if op_type not in ("overwrite", "create") and not find:
         return f"<error: 'find' parameter is required for type '{op_type}'>"
     if not isinstance(data, str):
         return "<error: 'data' must be a string>"
@@ -471,6 +471,17 @@ def tool_edit_file(args, cwd, virtual_root):
     # Check virtual root
     if not is_within_root(file_path, virtual_root):
         return f"<edit_file denied: {file_path} is outside virtual root {virtual_root}>"
+
+    # Create: only for new files
+    if op_type == "create":
+        if file_path.exists():
+            return f"<error: file '{file_path}' already exists (use 'overwrite' to replace existing files)>"
+        try:
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+            file_path.write_text(data, encoding='utf-8')
+            return f"<file created: {file_path} ({len(data)} chars)>"
+        except Exception as e:
+            return f"<error: cannot create file '{file_path}': {e}>"
 
     if not file_path.exists():
         return f"<error: file '{file_path}' does not exist>"
@@ -663,7 +674,9 @@ def format_edit_desc(args):
     X = C.RESET
     Y = C.YELLOW
 
-    if op == 'overwrite':
+    if op == 'create':
+        return f"创建新文件 {file}（{len(data)} 字符）:\n{G}{data}{X}"
+    elif op == 'overwrite':
         return f"覆盖写入 {file}（{len(data)} 字符）:\n{G}{data}{X}"
     elif op == 'replace':
         return (f"在 {file} 中 替换{meta_str}:\n"
@@ -726,11 +739,11 @@ def build_system_message(root_dir):
             "\n- **Use when necessary**. If you just want to check directory content, use 'cd xxx && ls' or simply use 'ls xxx' is a better choice. However, if it is required to finish complex task, e.g. search text, edit file, etc, use 'change_dir' instead of 'cd dir && command'."
             "\n- **Never do useless things**. When changing directory, never split a simple operation. For example, if you want to change dir to '../foo/bar', do not call 'change_dir(..)', 'change_dir(foo)', then 'change_dir(bar)'. One call is enough: 'change_dir(../foo/bar)'."
             "\n\n## File editing rule"
-            "\n- **MUST Use edit_file instead of sed for file editing**. The 'edit_file' tool provides structured file editing with append/prepend/replace/overwrite operations. FORBIDDEN using shell commands like 'sed', 'echo >' etc, unless you want to create a new file, for file modifications when edit_file can do the job. The edit_file tool can ONLY edit an EXISTING file. Trying to 'edit' a non-existing file is FORBIDDEN; you MUST create it first by using 'touch' or etc."
-            "\n- **Provide precise find strings**. The 'find' parameter must match exact file content. If the find string has multiple matches, the tool will fail with an ambiguity error. In that case, use the 'context' parameter to narrow down which match you want, or specify the exact 'count' to update all matches."
-            "\n- **Context narrows matches**. When 'context' is provided, the tool first locates context matches, then applies the operation on 'find' within each context match. This disambiguates which occurrence to edit."
-            "\n- **Count must match exactly**. If you specify count: N, the file must have exactly N matches (of find or context). If counts don't match, the operation fails. Default count is 1."
-            "\n- **Operation types**: 'replace' substitutes find with data; 'append' inserts data after find; 'prepend' inserts data before find; 'overwrite' replaces the entire file content with data (no find needed)."
+            "\n- **MUST Use edit_file insteadof sed for file editing**. The 'edit_file' tool provides structured file editing with append/prepend/replace/overwrite operations. FORBIDDEN using shell commands like 'sed', 'echo >' etc, for file modifications when edit_file can do the job."
+            "\n- **Operation types**: 'create' creates a new file (fails if file already exists, no find needed); 'overwrite' replaces entire file content (file must exist, no find needed); 'replace' substitutes find with data; 'append' inserts data after find; 'prepend' inserts data before find."
+            "\n- **Provide precise find strings**. The 'find' parameter must match exact file content. If ambiguous, use 'context' to narrow down, or specify exact 'count' to update all matches."
+            "\n- **Context narrows matches**. When 'context' is provided, the tool first locates context matches, then applies the operation on 'find' within each context match."
+            "\n- **Count must match exactly**. If you specify count: N, the file must have exactly N matches. If counts don't match, the operation fails. Default count is 1."
             "\n- **All edits require user approval**. Every edit_file call will be confirmed by the user before execution."
             "\n\nCommunication and interact rule"
             "\n- **Respect user privacy**. If the user does not want you to view or check something, respect user's choice. Do not try to use non-standard methods to avoid the limitation."
