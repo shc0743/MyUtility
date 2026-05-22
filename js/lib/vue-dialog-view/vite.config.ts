@@ -1,7 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import dts from 'vite-plugin-dts'
 import cssInjectedByJsPlugin from 'vite-plugin-css-injected-by-js'
 
 type ExtractElement<T> = T extends (infer U)[] ? U : T;
@@ -9,9 +8,6 @@ type ExtractElement<T> = T extends (infer U)[] ? U : T;
 const createConfig = () => defineConfig({
   plugins: [
     vue(),
-    dts({
-      insertTypesEntry: true,
-    }),
   ],
   build: {
     lib: {

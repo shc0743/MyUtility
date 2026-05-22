@@ -3,10 +3,10 @@ import { computed as e, createCommentVNode as t, createElementBlock as n, create
 var g = ["closedBy"], _ = {
 	key: 0,
 	class: "dialog-title-bar"
-}, v = { class: "dialog-title" }, y = { class: "dialog-content" }, b = {
+}, v = { class: "dialog-title" }, y = { class: "dialog-content-wrapper" }, b = { class: "dialog-content" }, x = {
 	key: 1,
 	class: "dialog-footer"
-}, x = /* @__PURE__ */ ((e, t) => {
+}, S = /* @__PURE__ */ ((e, t) => {
 	let n = e.__vccOpts || e;
 	for (let [e, r] of t) n[e] = r;
 	return n;
@@ -32,68 +32,68 @@ var g = ["closedBy"], _ = {
 		}
 	},
 	emits: ["update:modelValue", "closed"],
-	setup(i, { expose: x, emit: S }) {
-		let C = i, w = S, T = f(), E = () => {
-			w("update:modelValue", !0);
-		}, D = () => {
-			w("update:modelValue", !1);
-		}, O = (e) => {
-			e.preventDefault(), C.closable && D();
-		}, k = f(!1), A = () => {
-			if (!k.value) {
-				if (!C.closable && C.modelValue) {
+	setup(i, { expose: S, emit: C }) {
+		let w = i, T = C, E = f(), D = () => {
+			T("update:modelValue", !0);
+		}, O = () => {
+			T("update:modelValue", !1);
+		}, k = (e) => {
+			e.preventDefault(), w.closable && O();
+		}, A = f(!1), j = () => {
+			if (!A.value) {
+				if (!w.closable && w.modelValue) {
 					o(() => {
-						T.value && !T.value.open && T.value.showModal();
+						E.value && !E.value.open && E.value.showModal();
 					});
 					return;
 				}
-				C.modelValue && w("update:modelValue", !1), o(() => {
-					C.modelValue && T.value && !T.value.open && T.value.showModal();
-				}), w("closed");
+				w.modelValue && T("update:modelValue", !1), o(() => {
+					w.modelValue && E.value && !E.value.open && E.value.showModal();
+				}), T("closed");
 			}
-		}, j = e(() => C.closable ? C.closeOnClickMask ? "any" : "closerequest" : "none");
-		m(() => C.modelValue, async (e) => {
-			await o(), e ? T.value && !T.value.open && T.value.showModal() : T.value && T.value.open && T.value.close();
+		}, M = e(() => w.closable ? w.closeOnClickMask ? "any" : "closerequest" : "none");
+		m(() => w.modelValue, async (e) => {
+			await o(), e ? E.value && !E.value.open && E.value.showModal() : E.value && E.value.open && E.value.close();
 		});
-		let M = () => {
-			C.modelValue && T.value && !T.value.open && T.value.showModal();
+		let N = () => {
+			w.modelValue && E.value && !E.value.open && E.value.showModal();
 		};
 		return u(() => {
-			M();
+			N();
 		}), c(() => {
-			T.value && T.value.open && T.value.close();
+			E.value && E.value.open && E.value.close();
 		}), l(() => {
-			T.value && T.value.open && (k.value = !0, T.value.close(), o(() => k.value = !1));
+			E.value && E.value.open && (A.value = !0, E.value.close(), o(() => A.value = !1));
 		}), s(() => {
-			M();
-		}), x({
-			get: () => T.value,
-			open: E,
-			close: D
+			N();
+		}), S({
+			get: () => E.value,
+			open: D,
+			close: O
 		}), (e, o) => (d(), n("dialog", a({
 			ref_key: "dialogRef",
-			ref: T,
+			ref: E,
 			class: "dialog-view"
 		}, e.$attrs, {
-			onClose: A,
-			onCancel: O,
-			closedBy: j.value
+			onClose: j,
+			onCancel: k,
+			closedBy: M.value
 		}), [
 			i.showTitleBar ? (d(), n("div", _, [r("span", v, [p(e.$slots, "title", {}, void 0, !0)]), i.showCloseButton && i.closable ? (d(), n("button", {
 				key: 0,
 				type: "button",
 				"aria-label": "Close the dialog",
 				class: "dialog-close-button",
-				onClick: h(D, ["prevent"])
+				onClick: h(O, ["prevent"])
 			}, "×")) : t("", !0)])) : t("", !0),
-			r("div", y, [p(e.$slots, "default", {}, void 0, !0)]),
-			e.$slots.footer ? (d(), n("div", b, [p(e.$slots, "footer", {}, void 0, !0)])) : t("", !0)
+			r("div", y, [r("div", b, [p(e.$slots, "default", {}, void 0, !0)])]),
+			e.$slots.footer ? (d(), n("div", x, [p(e.$slots, "footer", {}, void 0, !0)])) : t("", !0)
 		], 16, g));
 	}
-}), [["__scopeId", "data-v-7641dcfa"]]), S = { install: (e) => {
-	e.component("DialogView", x);
+}), [["__scopeId", "data-v-8eb40789"]]), C = { install: (e) => {
+	e.component("DialogView", S);
 } };
 //#endregion
-export { x as DialogView, S as DialogViewPlugin, S as default };
+export { S as DialogView, C as DialogViewPlugin, C as default };
 
 //# sourceMappingURL=cssless.es.js.map

@@ -20,8 +20,10 @@
       >&times;</button>
     </div>
     
-    <div class="dialog-content">
-      <slot></slot>
+    <div class="dialog-content-wrapper">
+      <div class="dialog-content">
+        <slot></slot>
+      </div>
     </div>
 
     <div v-if="$slots.footer" class="dialog-footer">
@@ -216,11 +218,16 @@ defineExpose({
   outline-offset: -2px;
 }
 
-.dialog-content {
+.dialog-content-wrapper {
   flex: 1;
   overflow: auto;
+}
+
+.dialog-content {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 .dialog-footer {

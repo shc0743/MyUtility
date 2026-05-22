@@ -145,6 +145,10 @@ Example:
 
 These variables work across all builds and are the recommended way to adjust spacing.
 
+### Content Area Layout
+
+The dialog's content area is a flex column container. Child components can use `flex: 1` (or `height: 100%`) to fill the available space, and overflow scrolling is handled by the wrapper — avoiding the `display:flex` + `overflow:auto` combination on the same element that causes issues in some browsers.
+
 ---
 
 ## 🛠️ Advanced: Build Variants

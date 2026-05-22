@@ -20,8 +20,10 @@
       >&times;</button>
     </div>
     
-    <div class="_da3b3b2a4aeed1ee">
-      <slot></slot>
+    <div class="_0be228fb3f6dcf6a">
+      <div class="_da3b3b2a4aeed1ee">
+        <slot></slot>
+      </div>
     </div>
 
     <div v-if="$slots.footer" class="_61879ba330d9a71c">
@@ -216,11 +218,16 @@ defineExpose({
   outline-offset: -2px;
 }
 
-._da3b3b2a4aeed1ee {
+._0be228fb3f6dcf6a {
   flex: 1;
   overflow: auto;
+}
+
+._da3b3b2a4aeed1ee {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
 ._61879ba330d9a71c {

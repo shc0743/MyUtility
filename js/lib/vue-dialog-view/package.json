@@ -1,6 +1,6 @@
 {
     "name": "vue-dialog-view",
-    "version": "1.8.4",
+    "version": "2.0.0-alpha.1",
     "description": "A modern Vue 3 dialog component using native dialog element",
     "type": "module",
     "main": "./dist/dialog-view.umd.js",
@@ -50,8 +50,9 @@
         "dev": "vite",
         "clean": "rimraf dist",
         "obfuscate": "node ./obfuscate-classes.mjs",
-        "build": "npm run clean && npm run obfuscate && npm run type-check && npm run build-only",
+        "build": "npm run clean && npm run obfuscate && npm run type-check && npm run build:types && npm run build-only",
         "type-check": "vue-tsc --noEmit",
+        "build:types": "vue-tsc --declaration --emitDeclarationOnly",
         "build-only": "npm run build-only:normal && npm run build-only:unobfuscated && npm run build-only:cssless && npm run build-only:cssless-obfuscated",
         "build-only:normal": "vite build",
         "build-only:unobfuscated": "vite build --mode unobfuscated",
@@ -68,7 +69,6 @@
         "typescript": "^5.9.3",
         "vite": "^8.0.11",
         "vite-plugin-css-injected-by-js": "^5.0.1",
-        "vite-plugin-dts": "^5.0.0",
         "vue": "^3.5.34",
         "vue-tsc": "^3.2.8"
     },
