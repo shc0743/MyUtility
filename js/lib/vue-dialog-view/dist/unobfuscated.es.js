@@ -1,13 +1,21 @@
-(function(){try{if(typeof document<`u`){var e=document.createElement(`style`);e.appendChild(document.createTextNode(`.dialog-view[data-v-8eb40789]{padding:var(--dialog-padding,20px);box-sizing:border-box;border:1px solid gray;border-radius:5px;max-width:calc(100% - 2em);max-height:calc(100% - 2em);overflow:hidden;outline:0!important}.dialog-view[open][data-v-8eb40789]{flex-direction:column;display:flex}.dialog-view[data-v-8eb40789]::backdrop{background:#00000080}.dialog-title-bar[data-v-8eb40789]{min-height:var(--dialog-title-height,24px);white-space:pre;-webkit-user-select:none;user-select:none;flex-direction:row;align-items:center;margin-bottom:.5em;display:flex;overflow:hidden}.dialog-title[data-v-8eb40789]{text-align:center;text-overflow:ellipsis;flex:1;font-size:large;font-weight:700;overflow:hidden}.dialog-close-button[data-v-8eb40789]{color:#666;cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;width:24px;height:24px;margin-left:.5em;padding:10px;font-size:1.5em;line-height:1;text-decoration:none;display:flex}.dialog-close-button[data-v-8eb40789]:hover{color:#333;background-color:#f0f0f0;border-radius:3px}.dialog-close-button[data-v-8eb40789]:focus-visible{outline-offset:-2px;outline:2px solid #a0cfff}.dialog-content-wrapper[data-v-8eb40789]{flex:1;overflow:auto}.dialog-content[data-v-8eb40789]{flex-direction:column;width:100%;height:100%;display:flex}.dialog-footer[data-v-8eb40789]{margin-top:.5em}/*$vite$:1*/`)),document.head.appendChild(e)}}catch(e){console.error(`vite-plugin-css-injected-by-js`,e)}})();
-import { computed as e, createCommentVNode as t, createElementBlock as n, createElementVNode as r, defineComponent as i, mergeProps as a, nextTick as o, onActivated as s, onBeforeUnmount as c, onDeactivated as l, onMounted as u, openBlock as d, ref as f, renderSlot as p, watch as m, withModifiers as h } from "vue";
+(function(){try{if(typeof document<`u`){var e=document.createElement(`style`);e.appendChild(document.createTextNode(`.dialog-view[data-v-111c597e]{--dvinternal-bg:var(--dialog-bg,#fff);--dvinternal-text:var(--dialog-text-color,#000);--dvinternal-border:var(--dialog-border-color,gray);--dvinternal-backdrop:var(--dialog-backdrop-bg,#00000080);--dvinternal-close-btn:var(--dialog-close-btn-color,#666);--dvinternal-close-btn-hover:var(--dialog-close-btn-hover-color,#333);--dvinternal-close-btn-hover-bg:var(--dialog-close-btn-hover-bg,#f0f0f0);--dvinternal-close-btn-active-bg:var(--dialog-close-btn-active-bg,#e0e0e0);--dvinternal-close-btn-focus:var(--dialog-close-btn-focus-outline,#a0cfff);padding:var(--dialog-padding,20px);border:1px solid var(--dvinternal-border);box-sizing:border-box;background:var(--dvinternal-bg);max-width:calc(100% - 2em);max-height:calc(100% - 2em);color:var(--dvinternal-text);border-radius:5px;overflow:hidden;outline:0!important}.dialog-view[data-theme=dark][data-v-111c597e]{--dvinternal-bg:var(--dialog-bg,#1e1e1e);--dvinternal-text:var(--dialog-text-color,#e0e0e0);--dvinternal-border:var(--dialog-border-color,#555);--dvinternal-backdrop:var(--dialog-backdrop-bg,#000000b3);--dvinternal-close-btn:var(--dialog-close-btn-color,#aaa);--dvinternal-close-btn-hover:var(--dialog-close-btn-hover-color,#ddd);--dvinternal-close-btn-hover-bg:var(--dialog-close-btn-hover-bg,#333);--dvinternal-close-btn-active-bg:var(--dialog-close-btn-active-bg,#444);--dvinternal-close-btn-focus:var(--dialog-close-btn-focus-outline,#64a0dc)}.dialog-view[open][data-v-111c597e]{flex-direction:column;display:flex}.dialog-view[data-v-111c597e]::backdrop{background:var(--dvinternal-backdrop)}.dialog-title-bar[data-v-111c597e]{min-height:var(--dialog-title-height,24px);white-space:pre;-webkit-user-select:none;user-select:none;flex-direction:row;align-items:center;margin-bottom:.5em;display:flex;overflow:hidden}.dialog-title[data-v-111c597e]{text-align:center;text-overflow:ellipsis;flex:1;font-size:large;font-weight:700;overflow:hidden}.dialog-close-button[data-v-111c597e]{color:var(--dvinternal-close-btn);cursor:pointer;background:0 0;border:none;justify-content:center;align-items:center;width:24px;height:24px;margin-left:.5em;padding:10px;font-size:1.5em;line-height:1;text-decoration:none;display:flex}.dialog-close-button[data-v-111c597e]:hover{color:var(--dvinternal-close-btn-hover);background-color:var(--dvinternal-close-btn-hover-bg);border-radius:3px}.dialog-close-button[data-v-111c597e]:active{background-color:var(--dvinternal-close-btn-active-bg)}.dialog-close-button[data-v-111c597e]:focus-visible{outline:2px solid var(--dvinternal-close-btn-focus);outline-offset:-2px}.dialog-content-wrapper[data-v-111c597e]{flex:1;overflow:auto}.dialog-content[data-v-111c597e]{flex-direction:column;width:100%;height:100%;display:flex}.dialog-footer[data-v-111c597e]{margin-top:.5em}/*$vite$:1*/`)),document.head.appendChild(e)}}catch(e){console.error(`vite-plugin-css-injected-by-js`,e)}})();
+import { computed as e, createCommentVNode as t, createElementBlock as n, createElementVNode as r, defineComponent as i, inject as a, mergeProps as o, nextTick as s, onActivated as c, onBeforeUnmount as l, onDeactivated as u, onMounted as d, openBlock as f, ref as p, renderSlot as m, watch as h, withModifiers as g } from "vue";
+var _ = p({ theme: "light" });
+function v(e) {
+	_.value = {
+		..._.value,
+		...e
+	};
+}
+//#endregion
 //#region src/DialogView.vue?vue&type=script&setup=true&lang.ts
-var g = ["closedBy"], _ = {
+var y = ["data-theme", "closedBy"], b = {
 	key: 0,
 	class: "dialog-title-bar"
-}, v = { class: "dialog-title" }, y = { class: "dialog-content-wrapper" }, b = { class: "dialog-content" }, x = {
+}, x = { class: "dialog-title" }, S = { class: "dialog-content-wrapper" }, C = { class: "dialog-content" }, w = {
 	key: 1,
 	class: "dialog-footer"
-}, S = /* @__PURE__ */ ((e, t) => {
+}, T = /* @__PURE__ */ ((e, t) => {
 	let n = e.__vccOpts || e;
 	for (let [e, r] of t) n[e] = r;
 	return n;
@@ -30,71 +38,80 @@ var g = ["closedBy"], _ = {
 		closeOnClickMask: {
 			type: Boolean,
 			default: !1
-		}
+		},
+		theme: {}
 	},
 	emits: ["update:modelValue", "closed"],
-	setup(i, { expose: S, emit: C }) {
-		let w = i, T = C, E = f(), D = () => {
-			T("update:modelValue", !0);
-		}, O = () => {
-			T("update:modelValue", !1);
-		}, k = (e) => {
-			e.preventDefault(), w.closable && O();
-		}, A = f(!1), j = () => {
-			if (!A.value) {
-				if (!w.closable && w.modelValue) {
-					o(() => {
-						E.value && !E.value.open && E.value.showModal();
+	setup(i, { expose: v, emit: T }) {
+		let E = i, D = T, O = p(), k = () => {
+			D("update:modelValue", !0);
+		}, A = () => {
+			D("update:modelValue", !1);
+		}, j = (e) => {
+			e.preventDefault(), E.closable && A();
+		}, M = p(!1), N = () => {
+			if (!M.value) {
+				if (!E.closable && E.modelValue) {
+					s(() => {
+						O.value && !O.value.open && O.value.showModal();
 					});
 					return;
 				}
-				w.modelValue && T("update:modelValue", !1), o(() => {
-					w.modelValue && E.value && !E.value.open && E.value.showModal();
-				}), T("closed");
+				E.modelValue && D("update:modelValue", !1), s(() => {
+					E.modelValue && O.value && !O.value.open && O.value.showModal();
+				}), D("closed");
 			}
-		}, M = e(() => w.closable ? w.closeOnClickMask ? "any" : "closerequest" : "none");
-		m(() => w.modelValue, async (e) => {
-			await o(), e ? E.value && !E.value.open && E.value.showModal() : E.value && E.value.open && E.value.close();
+		}, P = e(() => E.closable ? E.closeOnClickMask ? "any" : "closerequest" : "none"), F = a("dialogViewConfig", void 0), I = p(!1), L = typeof window < "u" ? window.matchMedia("(prefers-color-scheme: dark)") : null, R = null;
+		L && (I.value = L.matches, R = (e) => {
+			I.value = e.matches;
+		}, L.addEventListener("change", R));
+		let z = e(() => {
+			let e = E.theme ?? F?.theme ?? _.value.theme ?? "light";
+			return e === "auto" ? I.value ? "dark" : "light" : e;
 		});
-		let N = () => {
-			w.modelValue && E.value && !E.value.open && E.value.showModal();
+		h(() => E.modelValue, async (e) => {
+			await s(), e ? O.value && !O.value.open && O.value.showModal() : O.value && O.value.open && O.value.close();
+		});
+		let B = () => {
+			E.modelValue && O.value && !O.value.open && O.value.showModal();
 		};
-		return u(() => {
-			N();
-		}), c(() => {
-			E.value && E.value.open && E.value.close();
+		return d(() => {
+			B();
 		}), l(() => {
-			E.value && E.value.open && (A.value = !0, E.value.close(), o(() => A.value = !1));
-		}), s(() => {
-			N();
-		}), S({
-			get: () => E.value,
-			open: D,
-			close: O
-		}), (e, o) => (d(), n("dialog", a({
+			O.value && O.value.open && O.value.close(), L && R && L.removeEventListener("change", R);
+		}), u(() => {
+			O.value && O.value.open && (M.value = !0, O.value.close(), s(() => M.value = !1));
+		}), c(() => {
+			B();
+		}), v({
+			get: () => O.value,
+			open: k,
+			close: A
+		}), (e, a) => (f(), n("dialog", o({
 			ref_key: "dialogRef",
-			ref: E,
-			class: "dialog-view"
+			ref: O,
+			class: "dialog-view",
+			"data-theme": z.value
 		}, e.$attrs, {
-			onClose: j,
-			onCancel: k,
-			closedBy: M.value
+			onClose: N,
+			onCancel: j,
+			closedBy: P.value
 		}), [
-			i.showTitleBar ? (d(), n("div", _, [r("span", v, [p(e.$slots, "title", {}, void 0, !0)]), i.showCloseButton && i.closable ? (d(), n("button", {
+			i.showTitleBar ? (f(), n("div", b, [r("span", x, [m(e.$slots, "title", {}, void 0, !0)]), i.showCloseButton && i.closable ? (f(), n("button", {
 				key: 0,
 				type: "button",
 				"aria-label": "Close the dialog",
 				class: "dialog-close-button",
-				onClick: h(O, ["prevent"])
+				onClick: g(A, ["prevent"])
 			}, "×")) : t("", !0)])) : t("", !0),
-			r("div", y, [r("div", b, [p(e.$slots, "default", {}, void 0, !0)])]),
-			e.$slots.footer ? (d(), n("div", x, [p(e.$slots, "footer", {}, void 0, !0)])) : t("", !0)
-		], 16, g));
+			r("div", S, [r("div", C, [m(e.$slots, "default", {}, void 0, !0)])]),
+			e.$slots.footer ? (f(), n("div", w, [m(e.$slots, "footer", {}, void 0, !0)])) : t("", !0)
+		], 16, y));
 	}
-}), [["__scopeId", "data-v-8eb40789"]]), C = { install: (e) => {
-	e.component("DialogView", S);
+}), [["__scopeId", "data-v-111c597e"]]), E = { install: (e, t) => {
+	t && e.provide("dialogViewConfig", t), e.component("DialogView", T);
 } };
 //#endregion
-export { S as DialogView, C as DialogViewPlugin, C as default };
+export { T as DialogView, E as DialogViewPlugin, E as default, _ as dialogViewConfig, v as setDialogViewConfig };
 
 //# sourceMappingURL=unobfuscated.es.js.map

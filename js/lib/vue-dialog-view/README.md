@@ -9,6 +9,7 @@ A modern Vue 3 dialog component using the native HTML5 `<dialog>` element.
 - 🎯 **Native `<dialog>`** – Built‑in element for better accessibility and performance  
 - ♿ **Accessible** – Proper ARIA labels, keyboard support  
 - 🎨 **Customizable** – Title bar, close button, backdrop click behaviour  
+- 🌓 **Dark mode** – Module-level, plugin-level, and per-component theme control
 - 🧩 **Slot support** – Title, footer, and main content slots  
 - 📦 **Vue 3 + TypeScript** – Composition API, tree‑shakable  
 - 🎭 **Flexible styling** – CSS variables for easy theming
@@ -67,6 +68,7 @@ const showDialog = ref(false)
 | `showCloseButton` | `boolean` | `true` | Show/hide the close button |
 | `closable` | `boolean` | `true` | Whether the user can close the dialog |
 | `closeOnClickMask` | `boolean` | `false` | Whether clicking the backdrop closes the dialog |
+| `theme` | `'light' \| 'dark' \| 'auto'` | `undefined` | Override theme for this component (see below) |
 
 ---
 
@@ -143,7 +145,70 @@ Example:
 }
 ```
 
-These variables work across all builds and are the recommended way to adjust spacing.
+
+
+### 🌓 Dark Mode / Theme
+
+The library supports three levels of theme configuration. Priority (highest first):
+
+1. **Component prop** – `<DialogView theme="dark" />`
+2. **Plugin option** – `app.use(DialogViewPlugin, { theme: 'dark' })`
+3. **Module-level** – `setDialogViewConfig({ theme: 'dark' })`
+
+The default theme is `'light'` for backward compatibility.
+
+#### Module-level (global, hot-updatable)
+
+```ts
+import { setDialogViewConfig } from 'vue-dialog-view'
+
+// Set globally – takes effect immediately on all mounted components
+setDialogViewConfig({ theme: 'dark' })
+
+// 'auto' follows the system prefers-color-scheme
+setDialogViewConfig({ theme: 'auto' })
+```
+
+#### Plugin-level (per Vue app)
+
+```ts
+import { createApp } from 'vue'
+import DialogViewPlugin from 'vue-dialog-view'
+
+const app = createApp(App)
+app.use(DialogViewPlugin, { theme: 'auto' })
+app.mount('#app')
+```
+
+#### Component prop (per instance)
+
+```vue
+<DialogView v-model="show" theme="dark">...</DialogView>
+<DialogView v-model="show" theme="auto">...</DialogView>
+```
+
+#### Customising colours via CSS variables
+
+All colours are exposed as CSS custom properties so you can fine-tune the appearance beyond the built-in light/dark presets:
+
+| Variable | Light default | Dark default |
+|----------|--------------|--------------|
+| `--dialog-bg` | `#fff` | `#1e1e1e` |
+| `--dialog-text-color` | `#000` | `#e0e0e0` |
+| `--dialog-border-color` | `gray` | `#555` |
+| `--dialog-backdrop-bg` | `rgba(0,0,0,0.5)` | `rgba(0,0,0,0.7)` |
+| `--dialog-close-btn-color` | `#666` | `#aaa` |
+| `--dialog-close-btn-hover-color` | `#333` | `#ddd` |
+| `--dialog-close-btn-hover-bg` | `#f0f0f0` | `#333` |
+| `--dialog-close-btn-active-bg` | `#e0e0e0` | `#444` |
+| `--dialog-close-btn-focus-outline` | `rgb(160,207,255)` | `rgb(100,160,220)` |
+
+```css
+:root {
+  --dialog-bg: #fafafa;
+  --dialog-border-color: #e0e0e0;
+}
+```
 
 ### Content Area Layout
 

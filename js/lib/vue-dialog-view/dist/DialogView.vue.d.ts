@@ -4,6 +4,7 @@ interface Props {
     showCloseButton?: boolean;
     closable?: boolean;
     closeOnClickMask?: boolean;
+    theme?: 'light' | 'dark' | 'auto';
 }
 declare var __VLS_1: {}, __VLS_3: {}, __VLS_5: {};
 type __VLS_Slots = {} & {

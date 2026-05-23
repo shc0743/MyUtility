@@ -2,6 +2,7 @@
   <dialog
     ref="dialogRef"
     class="dialog-view"
+    :data-theme="resolvedTheme"
     v-bind="$attrs"
     @close="handleDialogClose"
     @cancel="handleDialogCancel"
@@ -33,7 +34,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount, onDeactivated, onActivated } from 'vue'
+import { ref, watch, computed, nextTick, onMounted, onBeforeUnmount, onDeactivated, onActivated, inject } from 'vue'
+import { dialogViewConfig, type DialogViewConfig } from './config'
 
 interface Props {
   modelValue: boolean
@@ -41,6 +43,7 @@ interface Props {
   showCloseButton?: boolean
   closable?: boolean
   closeOnClickMask?: boolean
+  theme?: 'light' | 'dark' | 'auto'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -76,11 +79,9 @@ const handleDialogClose = (): void => {
   if (ignoreCloseEvent.value) return;
   if (!props.closable) {
     if (props.modelValue) {
-      // not programmatically close
-      // re-open the dialog
       nextTick(() => {
         if (dialogRef.value && !dialogRef.value.open) dialogRef.value.showModal()
-      }) // Avoid using 'cancel' event because some browsers handle it incorrectly, see https://issues.chromium.org/issues/41491338
+      })
       return;
     }
   }
@@ -89,14 +90,35 @@ const handleDialogClose = (): void => {
   }
   nextTick(() => {
     if (props.modelValue) {
-      // model value keep unchanged
       if (dialogRef.value && !dialogRef.value.open) dialogRef.value.showModal()
     }
   })
   emit('closed')
 }
 
-const closedBy = computed(() => props.closable ? (props.closeOnClickMask ? 'any' : 'closerequest') : 'none') // see https://developer.mozilla.org/en-US/docs/Web/API/HTMLDialogElement/closedBy
+const closedBy = computed(() => props.closable ? (props.closeOnClickMask ? 'any' : 'closerequest') : 'none')
+
+// --- Theme resolution ---
+const injectedConfig = inject<DialogViewConfig | undefined>('dialogViewConfig', undefined)
+
+const systemPrefersDark = ref(false)
+const systemQuery = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null
+let systemQueryListener: ((e: MediaQueryListEvent) => void) | null = null
+
+if (systemQuery) {
+  systemPrefersDark.value = systemQuery.matches
+  systemQueryListener = (e) => { systemPrefersDark.value = e.matches }
+  systemQuery.addEventListener('change', systemQueryListener)
+}
+
+const resolvedTheme = computed<'light' | 'dark'>(() => {
+  // Priority: component prop > plugin config > module-level config
+  const theme = props.theme ?? injectedConfig?.theme ?? dialogViewConfig.value.theme ?? 'light'
+  if (theme === 'auto') {
+    return systemPrefersDark.value ? 'dark' : 'light'
+  }
+  return theme
+})
 
 watch(() => props.modelValue, async (newValue: boolean) => {
   await nextTick()
@@ -127,6 +149,8 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (dialogRef.value && dialogRef.value.open) {
     dialogRef.value.close()
+  }  if (systemQuery && systemQueryListener) {
+    systemQuery.removeEventListener('change', systemQueryListener)
   }
 });
 
@@ -151,14 +175,38 @@ defineExpose({
 
 <style scoped>
 .dialog-view {
+  --dvinternal-bg: var(--dialog-bg, #fff);
+  --dvinternal-text: var(--dialog-text-color, #000);
+  --dvinternal-border: var(--dialog-border-color, gray);
+  --dvinternal-backdrop: var(--dialog-backdrop-bg, rgba(0, 0, 0, 0.5));
+  --dvinternal-close-btn: var(--dialog-close-btn-color, #666);
+  --dvinternal-close-btn-hover: var(--dialog-close-btn-hover-color, #333);
+  --dvinternal-close-btn-hover-bg: var(--dialog-close-btn-hover-bg, #f0f0f0);
+  --dvinternal-close-btn-active-bg: var(--dialog-close-btn-active-bg, #e0e0e0);
+  --dvinternal-close-btn-focus: var(--dialog-close-btn-focus-outline, rgb(160, 207, 255));
+
   padding: var(--dialog-padding, 20px);
   border-radius: 5px;
-  border: 1px solid gray;
+  border: 1px solid var(--dvinternal-border);
   outline: 0 !important;
   max-width: calc(100% - 2em);
   max-height: calc(100% - 2em);
   box-sizing: border-box;
   overflow: hidden;
+  background: var(--dvinternal-bg);
+  color: var(--dvinternal-text);
+}
+
+.dialog-view[data-theme="dark"] {
+  --dvinternal-bg: var(--dialog-bg, #1e1e1e);
+  --dvinternal-text: var(--dialog-text-color, #e0e0e0);
+  --dvinternal-border: var(--dialog-border-color, #555);
+  --dvinternal-backdrop: var(--dialog-backdrop-bg, rgba(0, 0, 0, 0.7));
+  --dvinternal-close-btn: var(--dialog-close-btn-color, #aaa);
+  --dvinternal-close-btn-hover: var(--dialog-close-btn-hover-color, #ddd);
+  --dvinternal-close-btn-hover-bg: var(--dialog-close-btn-hover-bg, #333);
+  --dvinternal-close-btn-active-bg: var(--dialog-close-btn-active-bg, #444);
+  --dvinternal-close-btn-focus: var(--dialog-close-btn-focus-outline, rgb(100, 160, 220));
 }
 
 .dialog-view[open] {
@@ -167,7 +215,7 @@ defineExpose({
 }
 
 .dialog-view::backdrop {
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--dvinternal-backdrop);
 }
 
 .dialog-title-bar {
@@ -193,7 +241,7 @@ defineExpose({
 .dialog-close-button {
   margin-left: 0.5em;
   text-decoration: none;
-  color: #666;
+  color: var(--dvinternal-close-btn);
   font-size: 1.5em;
   line-height: 1;
   width: 24px;
@@ -208,13 +256,17 @@ defineExpose({
 }
 
 .dialog-close-button:hover {
-  color: #333;
-  background-color: #f0f0f0;
+  color: var(--dvinternal-close-btn-hover);
+  background-color: var(--dvinternal-close-btn-hover-bg);
   border-radius: 3px;
 }
 
+.dialog-close-button:active {
+  background-color: var(--dvinternal-close-btn-active-bg);
+}
+
 .dialog-close-button:focus-visible {
-  outline: 2px solid rgb(160, 207, 255);
+  outline: 2px solid var(--dvinternal-close-btn-focus);
   outline-offset: -2px;
 }
 
