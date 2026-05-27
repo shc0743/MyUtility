@@ -626,9 +626,9 @@ TOOL_DISPLAY = {
 
 # Approval prompts per tool
 TOOL_APPROVAL_PROMPTS = {
-    "execute_command": "是否执行该命令？ (y:执行 / n:不执行 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行)",
-    "change_dir": "是否切换目录？ (y:切换 / n:不切换 / s:跳过并返回空结果)",
-    "edit_file": "是否编辑该文件？ (y:编辑 / n:不编辑 / s:跳过并返回空结果)",
+    "execute_command": "是否执行该命令？ (y:执行 / n:不执行 / b:阻止后续所有请求 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行)",
+    "change_dir": "是否切换目录？ (y:切换 / n:不切换 / b:阻止后续所有请求 / s:跳过并返回空结果)",
+    "edit_file": "是否编辑该文件？ (y:编辑 / n:不编辑 / b:阻止后续所有请求 / s:跳过并返回空结果)",
 }
 
 # Valid yes-like actions per tool
@@ -707,6 +707,8 @@ def get_tool_approval(func_name):
 
     if yn_lower == 'n':
         return 'n', None
+    elif yn_lower == 'b':
+        return 'b', None
     elif yn_lower == 's':
         return 's', None
     elif yn_lower in yes_set:
@@ -789,6 +791,7 @@ def repl(session_path=None, load_path=None):
     cwd = start_dir
     global current_truncate_val
     global EXEC_FILTER
+    blocked = False
     
     session_save_path = session_path   # 可能为 None
     load_only_path = load_path
@@ -813,7 +816,7 @@ def repl(session_path=None, load_path=None):
     
     print("DeepSeek Agent REPL (PoC).")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"]")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"], /unblock")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     if EXEC_FILTER:
         print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
@@ -934,6 +937,10 @@ def repl(session_path=None, load_path=None):
                 messages[0] = build_system_message(str(virtual_root))
                 print(f"已设置虚拟根：{virtual_root}")
                 continue
+            elif cmd == "/unblock":
+                blocked = False
+                print("已取消阻止，工具调用请求将恢复正常。")
+                continue
             elif cmd == "/model":
                 global _current_model
                 if not arg:
@@ -949,7 +956,7 @@ def repl(session_path=None, load_path=None):
                     print(f"已切换模型为: {_current_model}")
                 continue
             else:
-                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot, /model")
+                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot, /model, /unblock")
                 continue
         else:
             # Normal user input: send as user message
@@ -1102,12 +1109,24 @@ def repl(session_path=None, load_path=None):
                         label = TOOL_DISPLAY.get(func_name, func_name)
                         print(f"{C.YELLOW}\n{progress}模型请求{label}:\n>>> {val}{C.RESET}\n")
 
-                    # Get user approval
-                    action, custom_msg = get_tool_approval(func_name)
+                    # Get user approval (skip if blocked)
+                    if blocked:
+                        action = 'N'
+                        print(f"{C.DIM_RED}[已阻止] 自动拒绝该请求（使用 /unblock 取消阻止）{C.RESET}")
+                    else:
+                        action, custom_msg = get_tool_approval(func_name)
 
-                    if action == 'n':
+                    if action == 'N':
+                        result_str = "Request is blocked. Any further requests will also be blocked."
+
+                    elif action == 'n':
                         result_str = "<user rejected execution>"
                         print("已拒绝执行。将返回拒绝结果给模型。")
+
+                    elif action == 'b':
+                        blocked = True
+                        result_str = "<user blocked all execution>"
+                        print(f"{C.DIM_RED}已阻止后续所有工具调用请求（使用 /unblock 取消阻止）{C.RESET}")
 
                     elif action == 's':
                         result_str = "<skipped by user>"
