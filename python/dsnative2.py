@@ -243,6 +243,10 @@ def handle_cd_command(command, cwd, virtual_root):
     else:
         target_path = target_path.resolve()
 
+    # 检查是否已在目标目录
+    if target_path == cwd.resolve():
+        return cwd, "<cd failed: already in target directory>"
+
     # 虚拟 root 限制
     if not is_within_root(target_path, virtual_root):
         return cwd, f"<cd denied: {target_path} outside virtual root {virtual_root}>"

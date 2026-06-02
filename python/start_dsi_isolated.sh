@@ -52,6 +52,7 @@ BASE_CACHE="/data/data/com.termux/cache"
 INSTANCE_DIR="${BASE_CACHE}/workspace_${INSTANCE_ID}"
 
 handle_save() {
+    chmod 700 "$INSTANCE_DIR/data/data/com.termux/files/home"
     if [[ -f "$INSTANCE_DIR/session.txt" ]]; then
         if [[ -n "$SESSION_FILE" ]]; then
             # 有外部文件：直接复制回去
@@ -92,7 +93,11 @@ cleanup() {
 }
 
 # Create necessary subdirectories
-mkdir -p "$INSTANCE_DIR"/{linkerconfig,tmp}
+mkdir -p "$INSTANCE_DIR"/{linkerconfig,tmp,data/data/com.termux/files/home/ai-shared}
+
+touch "$INSTANCE_DIR/data/data/com.termux/files/home/skapikey.txt"
+chmod 600 "$INSTANCE_DIR/data/data/com.termux/files/home/skapikey.txt"
+chmod 500 "$INSTANCE_DIR/data/data/com.termux/files/home"
 
 # Copy linker configuration file (if it exists)
 if [[ -f /linkerconfig/ld.config.txt ]]; then
