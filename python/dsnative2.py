@@ -292,6 +292,7 @@ def stream_deepseek(messages):
         "tools": TOOLS,
         "stream": True,
         "thinking": {"type": "enabled"},
+        "reasoning_effort": "max"
     }
 
     try:

@@ -1,2 +1,7 @@
-(grep\s+?([\s\w\-_=]*?\s+?)*?-\w*?)r:::4:::This command is blocked by the client. Use `rg` instead.
+# Add your rules here!
+# Format:
+# command_regex
+# command_regex:::exit_code:::Block message
+# Example:
+# rm\s+-(rf|fr|f -r|r -f):::9:::rm -rf is blocked
 

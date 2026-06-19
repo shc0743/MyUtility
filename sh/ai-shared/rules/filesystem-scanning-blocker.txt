@@ -1,0 +1,9 @@
+/data
+/sdcard
+/storage/emulated/0
+/data/data/com.termux
+/data/data/com.termux/files
+/data/data/com.termux/files/usr
+/data/data/com.termux/files/home
+/data/data/com.termux/files/usr/lib
+

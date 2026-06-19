@@ -43,11 +43,11 @@ if [[ -f "$BLOCKED_COMMANDS_FILE" ]]; then
             message="This command is blocked by the user agent or the client."
         fi
         
-        if echo "$2" | grep -Pq "$pattern"; then
+        if echo "$2" | $PREFIX/bin/grep -Pq "$pattern"; then
             echo "$message"
             kill -"$signal" $$
         fi
     done < "$BLOCKED_COMMANDS_FILE"
 fi
 
-bash "$@"
+exec bash "$@"

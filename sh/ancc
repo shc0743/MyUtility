@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ancc() {
-    if [ $# -eq 0 ]; then
+    if [[ $# -eq 0 ]]; then
         echo "Usage: ancc file1.java [file2.java ...]"
         return 1
     fi
@@ -10,7 +10,7 @@ ancc() {
     local temp_dir=$(mktemp -d)
     
     # 在临时目录中编译
-    if ! javac -source 1.8 -target 1.8 -d "$temp_dir" "${java_files[@]}"; then
+    if ! javac --release 11 -cp $android_jar -d "$temp_dir" "${java_files[@]}"; then
         echo "Build FAILED: Java compilation error"
         rm -rf "$temp_dir"
         return 1
@@ -22,7 +22,7 @@ ancc() {
         class_files+=("$file")
     done < <(find "$temp_dir" -name "*.class" -type f -print0)
     
-    if [ ${#class_files[@]} -eq 0 ]; then
+    if [[ ${#class_files[@]} -eq 0 ]]; then
         echo "Build FAILED: No .class files generated in $temp_dir"
         echo "Directory contents:"
         find "$temp_dir" -type f
@@ -33,13 +33,13 @@ ancc() {
     echo "Packaging ${#class_files[@]} class files"
     
     # 打包所有.class文件
-    if ! d8 --release --lib "$android_jar" --output . "${class_files[@]}"; then
+    if ! d8 --release --min-api 24 --lib "$android_jar" --output . "${class_files[@]}"; then
         echo "Build FAILED: D8 error"
         rm -rf "$temp_dir"
         return 1
     fi
     
-    if [ -f "classes.dex" ]; then
+    if [[ -f "classes.dex" ]]; then
         chmod 444 "classes.dex"
         echo "Built ${main_class_name}.dex from ${#java_files[@]} Java file(s)"
         mv -f classes.dex "${main_class_name}.dex"
@@ -53,7 +53,7 @@ ancc() {
     rm -rf "$temp_dir"
     
     # 多文件提示
-    if [ ${#java_files[@]} -gt 1 ]; then
+    if [[ ${#java_files[@]} -gt 1 ]]; then
         echo "Available classes in dex:"
         for java_file in "${java_files[@]}"; do
             local cls_name=$(basename "$java_file" .java)
@@ -61,6 +61,5 @@ ancc() {
         done
     fi
 }
-anrun() {
-    /system/bin/app_process -Djava.class.path="$1" "$(pwd)" "$2"
-}
+
+ancc "$@"
