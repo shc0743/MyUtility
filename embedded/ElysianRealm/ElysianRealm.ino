@@ -28,8 +28,7 @@ struct ConfigData {
 ConfigData cfg;
 
 String sessionToken;
-bool adminAuthed = false;
-unsigned long lastAuthMs = 0;
+// adminAuthed/lastAuthMs removed — per-session cookie auth only
 
 bool restartPending = false;
 unsigned long restartAtMs = 0;
@@ -198,9 +197,7 @@ void clearAllSettings() {
   prefs.end();
 
   cfg = ConfigData();
-  adminAuthed = false;
   sessionToken = "";
-  lastAuthMs = 0;
 
   WiFi.softAPdisconnect(true);
   WiFi.disconnect(true, true);
@@ -279,19 +276,12 @@ void startWiFi() {
 bool isAuthed() {
   if (!cfg.valid) return true; // 首次未配置时，不需要管理密码
 
-  if (adminAuthed && (long)(millis() - lastAuthMs) < (long)AUTH_TIMEOUT_MS) {
-    return true;
-  }
-
   String cookie = server.header("Cookie");
   String target = "ESP32SESS=" + sessionToken;
   if (sessionToken.length() && cookie.indexOf(target) >= 0) {
-    adminAuthed = true;
-    lastAuthMs = millis();
     return true;
   }
 
-  adminAuthed = false;
   return false;
 }
 
@@ -323,8 +313,6 @@ void handleLogin() {
   String key = server.arg("adminKey");
   if (key == cfg.adminKey) {
     sessionToken = String((uint32_t)esp_random(), HEX) + String((uint32_t)esp_random(), HEX);
-    adminAuthed = true;
-    lastAuthMs = millis();
 
     server.sendHeader("Set-Cookie", "ESP32SESS=" + sessionToken + "; Path=/; HttpOnly");
     server.sendHeader("Location", "/");
@@ -399,7 +387,6 @@ void handleSave() {
     if (adminKey.length() > 0) {
       cfg.adminKey = adminKey;
       sessionToken = "";   // 修改了管理密钥后，强制重新登录
-      adminAuthed = false;
     }
   }
 
@@ -418,7 +405,6 @@ void handleSave() {
 }
 
 void handleLogout() {
-  adminAuthed = false;
   sessionToken = "";
   server.sendHeader("Set-Cookie", "ESP32SESS=deleted; Path=/; Max-Age=0");
   server.sendHeader("Location", "/");
