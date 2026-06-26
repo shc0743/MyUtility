@@ -1,0 +1,35 @@
+{
+  "name": "my-debate-automated",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "dev": "tsdown --watch",
+    "build-only": "tsdown",
+    "type-check": "tsc --noEmit",
+    "build": "run-p type-check \"build-only {@}\" --",
+    "start": "node dist/main.mjs"
+  },
+  "keywords": [],
+  "author": "chcs1013",
+  "license": "AGPL-3.0",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.6.0",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.0",
+    "ai": "^7.0.0",
+    "json5": "^2.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.1",
+    "npm-run-all2": "^9.0.2",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3"
+  },
+  "bin": "dist/main.mjs"
+}

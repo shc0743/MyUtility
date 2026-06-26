@@ -1,0 +1,62 @@
+{
+  providers: {
+    "4ac17dde-7afc-45a0-b2ae-f4c9a1f7eb73": {
+      name: "DeepSeek",
+      mode: "openai",
+      base_url: "https://api.deepseek.com/",
+      key: {
+        type: "env",
+        value: "DEEPSEEK_API_KEY"
+      }
+    },
+    "ad090b3f-bb77-42d6-818d-3c664260a6ff": {
+      name: "OpenAI",
+      mode: "openai",
+      base_url: "https://api.openai.com/",
+      key: {
+        type: "file",
+        value: "/home/user/.config/openai_key"
+      }
+    },
+    "0ec4290e-f151-4551-b936-8131f2acc172": {
+      name: "OpenRouter",
+      mode: "openai",
+      base_url: "https://openrouter.ai/api/",
+      key: {
+        type: "plaintext",
+        value: "sk-1234567890"
+      }
+    }
+  },
+  debate: {
+    "5d542834-907d-4634-a31b-d083cb572b48": {
+      topic: "豆腐脑是咸的好还是甜的好",
+      language: "zh-CN",
+      first: "affirmative",
+      affirmative: {
+        summary: "豆腐脑是咸的好",
+        provider: "4ac17dde-7afc-45a0-b2ae-f4c9a1f7eb73",
+        model: "deepseek-chat",
+        thinking: { type: "enabled" },
+        reasoning_effort: "max"
+      },
+      negative: {
+        summary: "豆腐脑是甜的好",
+        provider: "4ac17dde-7afc-45a0-b2ae-f4c9a1f7eb73",
+        model: "deepseek-chat",
+        thinking: { type: "enabled" },
+        reasoning_effort: "max"
+      },
+      judge: {
+        enabled: true,
+        provider: "4ac17dde-7afc-45a0-b2ae-f4c9a1f7eb73",
+        model: "deepseek-reasoner",
+        minimumRound: 2,
+        thinking: { type: "enabled" },
+        reasoning_effort: "max"
+      },
+      maxRound: 999,
+    }
+  },
+  activeConfig: "5d542834-907d-4634-a31b-d083cb572b48"
+}
