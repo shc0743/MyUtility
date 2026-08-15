@@ -6,7 +6,7 @@ Features:
 - Tools: execute_command -> client executes after user confirmation
 - Special handling for 'cd' (changes python process cwd) with virtual root restriction
 - System prompt includes detected shell (bash or cmd) and OS info
-- Special CLI commands starting with '/': /i, /input, /exit, /save, /load, /chroot
+- Special CLI commands starting with '/': /i, /input, /exit, /save, /load, /chroot, /translate <target_lang>
 - API key read from ./skapikey.txt (trimmed). fallback to env DEEPSEEK_API_KEY
 """
 import os
@@ -16,6 +16,7 @@ import json
 import shlex
 import subprocess
 import requests
+import urllib3
 import platform
 from pathlib import Path
 from datetime import datetime
@@ -37,6 +38,7 @@ DEFAULT_MODEL = os.environ.get('DSNATIVE2_DEFAULT_MODEL', "deepseek-v4-pro")
 _current_model = DEFAULT_MODEL  # 可在运行时通过 /model 切换
 TIMEOUT = 600
 TIMING_ENABLED = False if (os.environ.get('DSNATIVE2_DISABLE_TIMING', None) == 'true') else True
+_INSECURE = False  # set True via -k flag to skip SSL verification
 
 class C:
     RESET = "\033[0m"
@@ -144,6 +146,29 @@ TOOLS = [
         }
     }
 ]
+
+# ========== Translation sub-agent ==========
+# 独立于主 agent 的翻译模块：待翻译文本只以 tool result 形式传入，
+# 不进入 system/user 指令，以隔离上下文并防止提示词注入。
+TRANSLATE_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_text",
+            "description": "Get the text to translate."
+        }
+    }
+]
+
+TRANSLATE_SYSTEM_PROMPT = (
+    "You are a translation sub-agent with no access to any other conversation "
+    "context. The user will input the target language that the text should be "
+    "translated into. First, call the get_text tool to retrieve the actual "
+    "content to translate. After the content arrives as the tool result, "
+    "translate it into the target language and output ONLY the translated "
+    "content. Do not output anything except the translation: no explanations, "
+    "no preamble, no notes."
+)
 
 # ========== Helpers ==========
 def enable_vt_mode():
@@ -276,7 +301,7 @@ def call_deepseek(messages):
         "tools": TOOLS,
         "thinking": {"type": "enabled"}
     }
-    r = requests.post(url, headers=headers, json=payload, timeout=TIMEOUT)
+    r = requests.post(url, headers=headers, json=payload, timeout=TIMEOUT, verify=not _INSECURE)
     r.raise_for_status()
     return r.json()
 
@@ -296,7 +321,7 @@ def stream_deepseek(messages):
     }
 
     try:
-        with requests.post(url, headers=headers, json=payload, stream=True, timeout=TIMEOUT) as r:
+        with requests.post(url, headers=headers, json=payload, stream=True, timeout=TIMEOUT, verify=not _INSECURE) as r:
             r.raise_for_status()
             for line in r.iter_lines(decode_unicode=True):
                 if not line or not line.startswith("data:"):
@@ -319,6 +344,65 @@ def render_stream_chunk(chunk):
 
     if "tool_calls" in delta:
         pass#print(f"\n{C.YELLOW}[tool_call]{json.dumps(delta['tool_calls'], ensure_ascii=False)}{C.RESET}")
+
+def stream_translate(messages):
+    """Stream from the isolated translation sub-agent (only get_text tool)."""
+    url = BASE_URL.rstrip("/") + "/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "deepseek-v4-flash",
+        "messages": messages,
+        "tools": TRANSLATE_TOOLS,
+        "tool_choice": "none",
+        "stream": True,
+        "thinking": {"type": "disabled"},
+    }
+    with requests.post(url, headers=headers, json=payload, stream=True, timeout=TIMEOUT, verify=not _INSECURE) as r:
+        r.raise_for_status()
+        for line in r.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[len("data:"):].strip()
+            if data == "[DONE]":
+                break
+            yield json.loads(data)
+
+def translate_text(text, target_lang, realtime_out=False):
+    """
+    用隔离的翻译 sub-agent 翻译文本（上下文完全独立，防止提示词注入）。
+    返回翻译后的文本；结果异常时直接抛出，由调用方决定失败处理，不自动重试。
+    """
+    messages = [
+        {"role": "system", "content": TRANSLATE_SYSTEM_PROMPT},
+        {"role": "user", "content": target_lang},
+        {
+            "role": "assistant",
+            "reasoning_content": "Let me get the content to translate.",
+            "content": "",
+            "tool_calls": [{
+                "id": "call_1",
+                "type": "function",
+                "function": {"name": "get_text", "arguments": ""}
+            }]
+        },
+        {"role": "tool", "tool_call_id": "call_1", "content": text},
+    ]
+
+    translated = ""
+    for chunk in stream_translate(messages):
+        if realtime_out:
+            render_stream_chunk(chunk)
+        delta = chunk["choices"][0].get("delta", {})
+        if delta.get("content"):
+            translated += delta["content"]
+        if delta.get("tool_calls"):
+            raise RuntimeError("翻译 sub-agent 异常：返回了意外的工具调用 (tool_choice 已设为 none)")
+    if not translated.strip():
+        raise RuntimeError("翻译结果为空")
+    return translated
 
 def safe_norm_path(path_str):
     # normalize and return absolute Path
@@ -821,7 +905,7 @@ def repl(session_path=None, load_path=None):
     
     print("DeepSeek Agent REPL (PoC).")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"], /unblock")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"], /unblock, /translate <目标语言>")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     if EXEC_FILTER:
         print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
@@ -960,8 +1044,39 @@ def repl(session_path=None, load_path=None):
                         _current_model = newVal
                     print(f"已切换模型为: {_current_model}")
                 continue
+            elif cmd == "/translate":
+                if not arg:
+                    print("用法: /translate <目标语言>，例如: /translate 简体中文")
+                    continue
+                target_lang = arg.strip()
+                if not messages:
+                    print("错误：对话为空，没有可翻译的消息。")
+                    continue
+                last_msg = messages[-1]
+                if last_msg.get("role") != "assistant":
+                    print(f"错误：最后一条消息不是 assistant 消息（当前是 {last_msg.get('role')}），无法翻译。")
+                    continue
+                content = last_msg.get("content") or ""
+                if not isinstance(content, str) or not content.strip():
+                    print("错误：最后一条 assistant 消息的 content 为空，无法翻译。")
+                    continue
+                print(f"\n{C.DIM}--- 正在将上一条回复翻译为「{target_lang}」---{C.RESET}\n")
+                try:
+                    translated = translate_text(content, target_lang, realtime_out=True)
+                except (Exception, KeyboardInterrupt) as e:
+                    print(f"\n{C.DIM_RED}翻译失败: {e}{C.RESET}")
+                    print(f"{C.DIM_RED}原消息未被修改，可重新运行 /translate 重试。{C.RESET}")
+                    continue
+                print()
+                last_msg["content"] = translated
+                if session_save_path:
+                    save_messages_to_file(messages, session_save_path)
+                    print(f"{C.GREEN}翻译完成，已写回最后一条消息并自动保存。{C.RESET}")
+                else:
+                    print(f"{C.GREEN}翻译完成，已写回最后一条消息。{C.RESET}")
+                continue
             else:
-                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot, /model, /unblock")
+                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot, /model, /unblock, /translate")
                 continue
         else:
             # Normal user input: send as user message
@@ -1199,6 +1314,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='DeepSeek Agent REPL')
     parser.add_argument('-s', '--session', metavar='FILE', help='Set the session file location (an association will be established)')
     parser.add_argument('-l', '--load', '--load-from', dest='load_from', metavar='FILE', help='Load conversation history from the specified file (no association will be established after the content was loaded)')
+    parser.add_argument('-k', '--insecure', action='store_true', help='Skip SSL certificate verification (like curl -k)')
     args = parser.parse_args()
+    if args.insecure:
+        _INSECURE = True
+        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     
     repl(session_path=args.session, load_path=args.load_from)
