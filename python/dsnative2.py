@@ -15,6 +15,7 @@ import time
 import json
 import shlex
 import subprocess
+import signal
 import requests
 import urllib3
 import platform
@@ -39,6 +40,7 @@ _current_model = DEFAULT_MODEL  # 可在运行时通过 /model 切换
 TIMEOUT = 600
 TIMING_ENABLED = False if (os.environ.get('DSNATIVE2_DISABLE_TIMING', None) == 'true') else True
 _INSECURE = False  # set True via -k flag to skip SSL verification
+_auto_approve = False  # 开启后工具批准一律自动通过 (等价于按 y), 可用 SIGUSR1 或 /autoapprove 切换
 
 class C:
     RESET = "\033[0m"
@@ -783,8 +785,16 @@ def format_edit_desc(args):
 
 
 
+def _handle_sigusr1(signum, frame):
+    global _auto_approve
+    _auto_approve = not _auto_approve
+    print(f"\r[autoapprove: {'ON' if _auto_approve else 'OFF'}]\n", flush=True)
+
+
 def get_tool_approval(func_name):
     """Ask user for approval. Returns (action_key, custom_message_or_None)."""
+    if _auto_approve:
+        return 'y', None
     prompt = TOOL_APPROVAL_PROMPTS.get(
         func_name,
         "是否执行？ (y:是 / n:否 / s:跳过)"
@@ -880,6 +890,7 @@ def repl(session_path=None, load_path=None):
     cwd = start_dir
     global current_truncate_val
     global EXEC_FILTER
+    global _auto_approve
     blocked = False
     
     session_save_path = session_path   # 可能为 None
@@ -904,8 +915,9 @@ def repl(session_path=None, load_path=None):
             print(f"已从 {session_save_path} 加载会话")
     
     print("DeepSeek Agent REPL (PoC).")
+    print(f"pid={os.getpid()} — 另开终端 kill -USR1 {os.getpid()} 可切换自动批准")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"], /unblock, /translate <目标语言>")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"], /unblock, /autoapprove [on|off], /translate <目标语言>")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     if EXEC_FILTER:
         print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
@@ -916,7 +928,8 @@ def repl(session_path=None, load_path=None):
     turn = 1
     while True:
         try:
-            raw = input(f"\033[0;32m{cwd}\033[0m \033[0;97m$\033[0m ")
+            aa_prefix = "\033[0;32m[AA]\033[0m " if _auto_approve else ""
+            raw = input(f"{aa_prefix}\033[0;32m{cwd}\033[0m \033[0;97m$\033[0m ")
         except EOFError:
             print("\nEOF received. Exiting.")
             break
@@ -1029,6 +1042,18 @@ def repl(session_path=None, load_path=None):
             elif cmd == "/unblock":
                 blocked = False
                 print("已取消阻止，工具调用请求将恢复正常。")
+                continue
+            elif cmd == "/autoapprove":
+                if not arg:
+                    _auto_approve = not _auto_approve
+                elif arg.strip().lower() in ('on', '1', 'yes', 'y'):
+                    _auto_approve = True
+                elif arg.strip().lower() in ('off', '0', 'no', 'n'):
+                    _auto_approve = False
+                else:
+                    print("用法: /autoapprove [on|off]")
+                    continue
+                print(f"自动批准已{'开启' if _auto_approve else '关闭'}。")
                 continue
             elif cmd == "/model":
                 global _current_model
@@ -1319,5 +1344,8 @@ if __name__ == "__main__":
     if args.insecure:
         _INSECURE = True
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    
+
+    if hasattr(signal, 'SIGUSR1'):
+        signal.signal(signal.SIGUSR1, _handle_sigusr1)
+
     repl(session_path=args.session, load_path=args.load_from)
