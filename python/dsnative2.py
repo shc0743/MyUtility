@@ -11,9 +11,12 @@ Features:
 """
 import os
 import sys
+import io
 import time
 import json
 import shlex
+import uuid
+import base64
 import subprocess
 import signal
 import requests
@@ -41,6 +44,15 @@ TIMEOUT = 600
 TIMING_ENABLED = False if (os.environ.get('DSNATIVE2_DISABLE_TIMING', None) == 'true') else True
 _INSECURE = False  # set True via -k flag to skip SSL verification
 _auto_approve = False  # 开启后工具批准一律自动通过 (等价于按 y), 可用 SIGUSR1 或 /autoapprove 切换
+
+# read_image 工具允许的最大图片尺寸 (宽, 高) 像素。
+# 依据 https://api-docs.deepseek.com/zh-cn/guides/vision/ 目前上限为 4096*4096，
+# 将来若支持更大尺寸只需修改此值（等比缩放逻辑会随之调整）。
+MAX_IMAGE_SIZE = (4096, 4096)
+
+# 支持读取图片(read_image)的模型列表。
+# 当前模型不在此列表中时，read_image 调用会被直接拒绝。
+VISION_MODELS = ["deepseek-v4-flash-vision-exp"]
 
 class C:
     RESET = "\033[0m"
@@ -144,6 +156,23 @@ TOOLS = [
                     }
                 },
                 "required": ["file", "type", "data"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "read_image",
+            "description": "Read the image file at the specified path and add it into the conversation context so you can visually understand it. Returns a UUID string that identifies this image. Due to a system limitation, the image content itself is not put in the tool result; instead it will be delivered to you as the content of the immediately following user message (whose file filename is exactly the returned UUID). This tool can only be used once per turn, and must NOT be combined with any other tool call in the same turn. Only use it when you need to see the image content.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Path (or name) of the image file to read, e.g. 'foo.jpg'. Relative paths are resolved against the current working directory; absolute paths are also accepted."
+                    }
+                },
+                "required": ["name"]
             }
         }
     }
@@ -291,6 +320,21 @@ def handle_cd_command(command, cwd, virtual_root):
     except Exception as e:
         return cwd, f"<cd failed: {e}>"
 
+def _check_api_response(r):
+    """
+    检查 API 响应：若返回错误状态码（400/401/402/403/429/5xx 等），
+    先把 API 返回的错误正文打印到控制台（便于调试），再照常抛出 HTTPError 终止本次调用。
+    """
+    if r.status_code >= 400:
+        try:
+            err_body = r.json()
+            err_text = json.dumps(err_body, ensure_ascii=False, indent=2)
+        except Exception:
+            err_text = r.text
+        print(f"\n{C.RED}[API 错误] HTTP {r.status_code} {r.reason}{C.RESET}")
+        print(f"{C.DIM_RED}API 返回的错误文本:\n{err_text}{C.RESET}", flush=True)
+    r.raise_for_status()
+
 def call_deepseek(messages):
     url = BASE_URL.rstrip("/") + "/chat/completions"
     headers = {
@@ -304,7 +348,7 @@ def call_deepseek(messages):
         "thinking": {"type": "enabled"}
     }
     r = requests.post(url, headers=headers, json=payload, timeout=TIMEOUT, verify=not _INSECURE)
-    r.raise_for_status()
+    _check_api_response(r)
     return r.json()
 
 def stream_deepseek(messages):
@@ -324,7 +368,7 @@ def stream_deepseek(messages):
 
     try:
         with requests.post(url, headers=headers, json=payload, stream=True, timeout=TIMEOUT, verify=not _INSECURE) as r:
-            r.raise_for_status()
+            _check_api_response(r)
             for line in r.iter_lines(decode_unicode=True):
                 if not line or not line.startswith("data:"):
                     continue
@@ -363,7 +407,7 @@ def stream_translate(messages):
         "thinking": {"type": "disabled"},
     }
     with requests.post(url, headers=headers, json=payload, stream=True, timeout=TIMEOUT, verify=not _INSECURE) as r:
-        r.raise_for_status()
+        _check_api_response(r)
         for line in r.iter_lines(decode_unicode=True):
             if not line or not line.startswith("data:"):
                 continue
@@ -680,6 +724,89 @@ def tool_edit_file(args, cwd, virtual_root):
         return f"<error: cannot write file '{file_path}': {e}>"
 
 
+def tool_read_image(args, cwd, virtual_root):
+    """
+    Read an image file and inject its content into the conversation.
+    Returns (result_str, user_msg_or_None):
+    - Failure (denied/not an image/...): (error string, None), reported to the
+      model like any other tool error.
+    - Success: (uuid_str, synthesized "user" message). The uuid becomes the tool
+      result; the synthesized user message carries the base64 image and must be
+      appended right after the tool result. This fakes a user turn because
+      DeepSeek tool-result messages only accept plain text, not image content.
+    """
+    # 模型白名单检查：当前模型不支持视觉时，无论模型传入什么参数都直接拒绝
+    if _current_model not in VISION_MODELS:
+        return ("Error: The current model cannot recognize image. You should never call this tool again.", None)
+
+    path_raw = args.get("name", "")
+    if not path_raw:
+        return "<error: 'name' parameter is required>", None
+
+    file_path = Path(path_raw)
+    if not file_path.is_absolute():
+        file_path = (cwd / file_path).resolve()
+    else:
+        file_path = file_path.resolve()
+
+    # Permission check: must stay inside the virtual root
+    if not is_within_root(file_path, virtual_root):
+        return f"<read_image denied: {file_path} is outside virtual root {virtual_root}>", None
+    if not file_path.exists():
+        return f"<error: file '{file_path}' does not exist>", None
+    if not file_path.is_file():
+        return f"<error: '{file_path}' is not a file>", None
+
+    try:
+        from PIL import Image, ImageOps
+    except ImportError:
+        return "<error: Pillow (PIL) is not installed, cannot read images>", None
+
+    # Validate that the file really is a readable image
+    try:
+        with Image.open(file_path) as img:
+            img.verify()
+    except Exception as e:
+        return f"<error: '{file_path}' is not a valid image: {e}>", None
+
+    try:
+        with Image.open(file_path) as img:
+            src_format = img.format  # exif_transpose 返回新对象并丢失 .format，需先记录
+            img = ImageOps.exif_transpose(img)
+            # 等比缩放到 MAX_IMAGE_SIZE 之内；非 PNG/JPEG 的原始格式统一转码为 PNG
+            needs_resize = (img.width > MAX_IMAGE_SIZE[0] or img.height > MAX_IMAGE_SIZE[1])
+            if needs_resize or src_format not in ("PNG", "JPEG"):
+                if needs_resize:
+                    img.thumbnail(MAX_IMAGE_SIZE, Image.LANCZOS)
+                buf = io.BytesIO()
+                if src_format == "JPEG":
+                    img.convert("RGB").save(buf, format="JPEG", quality=90)
+                    mime = "image/jpeg"
+                else:
+                    img.save(buf, format="PNG")
+                    mime = "image/png"
+                payload = base64.b64encode(buf.getvalue()).decode("ascii")
+            else:
+                payload = base64.b64encode(file_path.read_bytes()).decode("ascii")
+                mime = "image/png" if src_format == "PNG" else "image/jpeg"
+    except Exception as e:
+        return f"<error: cannot process image '{file_path}': {e}>", None
+
+    img_uuid = str(uuid.uuid4())
+    # The tool result is only the uuid; the real image data follows as a
+    # synthesized "user" message (role user is a workaround for API limits).
+    # API 校验要求 file_data 是带 MIME 的 base64 data url，而不是裸 base64。
+    user_msg = {
+        "role": "user",
+        "content": [{
+            "type": "file",
+            "filename": img_uuid,
+            "file_data": f"data:{mime};base64,{payload}",
+        }],
+    }
+    return img_uuid, user_msg
+
+
 def tool_execute_command(args, cwd, sub_action):
     """
     Execute a shell command. Handles special sub_actions: e (edit), r (raw).
@@ -713,6 +840,7 @@ TOOL_DISPLAY = {
     "execute_command": "执行命令",
     "change_dir": "切换目录",
     "edit_file": "编辑文件",
+    "read_image": "读取图片",
 }
 
 # Approval prompts per tool
@@ -720,6 +848,7 @@ TOOL_APPROVAL_PROMPTS = {
     "execute_command": "是否执行该命令？ (y:执行 / n:不执行 / b:阻止后续所有请求 / s:跳过并返回空结果 / t:调整截断大小并执行 / e:编辑并执行 / r:跳过过滤器并执行)",
     "change_dir": "是否切换目录？ (y:切换 / n:不切换 / b:阻止后续所有请求 / s:跳过并返回空结果)",
     "edit_file": "是否编辑该文件？ (y:编辑 / n:不编辑 / b:阻止后续所有请求 / s:跳过并返回空结果)",
+    "read_image": "是否读取该图片？ (y:读取 / n:不读取 / b:阻止后续所有请求 / s:跳过并返回空结果)",
 }
 
 # Valid yes-like actions per tool
@@ -727,6 +856,7 @@ TOOL_YES_ACTIONS = {
     "execute_command": ("y", "t", "e", "r"),
     "change_dir": ("y", "t", "e", "r"),
     "edit_file": ("y",),
+    "read_image": ("y",),
 }
 
 
@@ -917,7 +1047,7 @@ def repl(session_path=None, load_path=None):
     print("DeepSeek Agent REPL (PoC).")
     print(f"pid={os.getpid()} — 另开终端 kill -USR1 {os.getpid()} 可切换自动批准")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"], /unblock, /autoapprove [on|off], /translate <目标语言>")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"|\"vision\"], /unblock, /autoapprove [on|off], /translate <目标语言>")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     if EXEC_FILTER:
         print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
@@ -1065,6 +1195,8 @@ def repl(session_path=None, load_path=None):
                         _current_model = 'deepseek-v4-pro'
                     elif newVal == 'flash':
                         _current_model = 'deepseek-v4-flash'
+                    elif newVal == 'vision':
+                        _current_model = 'deepseek-v4-flash-vision-exp'
                     else:
                         _current_model = newVal
                     print(f"已切换模型为: {_current_model}")
@@ -1237,6 +1369,7 @@ def repl(session_path=None, load_path=None):
             # ---- process each tool call ----
             has_excep = False
             total_tools = len(tool_calls)
+            read_image_msgs = []  # read_image 产生的伪用户消息（承载图片 base64），在全部 tool result 拼接后统一追加
 
             if total_tools > 1:
                 print(f"\n{C.YELLOW}模型想要执行多个操作！{C.RESET}")
@@ -1249,6 +1382,8 @@ def repl(session_path=None, load_path=None):
                     progress = f"[{i+1}/{total_tools}] " if total_tools > 1 else ""
                     if func_name == "edit_file":
                         print(f"{C.YELLOW}\n{progress}模型请求{format_edit_desc(args)}{C.RESET}\n")
+                    elif func_name == "read_image":
+                        print(f"{C.YELLOW}\n{progress}模型请求读取图片:\n>>> {args.get('name', '')}{C.RESET}\n")
                     else:
                         val = args.get("command", args.get("path", ""))
                         label = TOOL_DISPLAY.get(func_name, func_name)
@@ -1304,6 +1439,12 @@ def repl(session_path=None, load_path=None):
                                 result_str = tool_edit_file(args, cwd, virtual_root)
                                 print(f"{C.DIM}{result_str}{C.RESET}")
 
+                            elif func_name == "read_image":
+                                result_str, img_user_msg = tool_read_image(args, cwd, virtual_root)
+                                if img_user_msg is not None:
+                                    read_image_msgs.append(img_user_msg)
+                                print(f"{C.DIM}{result_str}{C.RESET}")
+
                             else:
                                 result_str = f"<error: unknown tool '{func_name}'>"
 
@@ -1321,7 +1462,11 @@ def repl(session_path=None, load_path=None):
                     "tool_call_id": tool.get("id"),
                     "content": result_str,
                 })
-        
+
+            # 将 read_image 的伪用户消息(图片内容)追加到对应 tool result 之后，
+            # 使其作为下一条"用户消息"随下一次请求发送给模型
+            messages.extend(read_image_msgs)
+
             if has_excep:
                 break
             sub_turn += 1
