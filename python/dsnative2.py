@@ -52,7 +52,7 @@ MAX_IMAGE_SIZE = (4096, 4096)
 
 # 支持读取图片(read_image)的模型列表。
 # 当前模型不在此列表中时，read_image 调用会被直接拒绝。
-VISION_MODELS = ["deepseek-v4-flash-vision-exp"]
+VISION_MODELS = ["deepseek-v4-flash-vision-exp","deepseek-v4.1-flash-expires-on-0910"]
 
 class C:
     RESET = "\033[0m"
