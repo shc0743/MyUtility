@@ -44,6 +44,7 @@ TIMEOUT = 600
 TIMING_ENABLED = False if (os.environ.get('DSNATIVE2_DISABLE_TIMING', None) == 'true') else True
 _INSECURE = False  # set True via -k flag to skip SSL verification
 _auto_approve = False  # 开启后工具批准一律自动通过 (等价于按 y), 可用 SIGUSR1 或 /autoapprove 切换
+_reasoning_effort = "max"  # 思考强度 (reasoning_effort 参数), 可用 /effort 切换
 
 # read_image 工具允许的最大图片尺寸 (宽, 高) 像素。
 # 依据 https://api-docs.deepseek.com/zh-cn/guides/vision/ 目前上限为 4096*4096，
@@ -52,7 +53,7 @@ MAX_IMAGE_SIZE = (4096, 4096)
 
 # 支持读取图片(read_image)的模型列表。
 # 当前模型不在此列表中时，read_image 调用会被直接拒绝。
-VISION_MODELS = ["deepseek-v4-flash-vision-exp","deepseek-v4.1-flash-expires-on-0910"]
+VISION_MODELS = ["deepseek-v4-flash-vision-exp","deepseek-v4.1-flash-expires-on-0910","deepseek-flash","deepseek-v4-flash","deepseek-v4-pro"]
 
 class C:
     RESET = "\033[0m"
@@ -363,7 +364,7 @@ def stream_deepseek(messages):
         "tools": TOOLS,
         "stream": True,
         "thinking": {"type": "enabled"},
-        "reasoning_effort": "max"
+        "reasoning_effort": _reasoning_effort
     }
 
     try:
@@ -1047,7 +1048,7 @@ def repl(session_path=None, load_path=None):
     print("DeepSeek Agent REPL (PoC).")
     print(f"pid={os.getpid()} — 另开终端 kill -USR1 {os.getpid()} 可切换自动批准")
     print(f"Working dir: {cwd}")
-    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"|\"vision\"], /unblock, /autoapprove [on|off], /translate <目标语言>")
+    print("Special commands: /i, /input, /exit, /save [FILENAME] [-f], /load FILENAME, /saveas NEWPATH, /chroot [NEWROOT], /model [MODEL|\"pro\"|\"flash\"|\"vision\"], /effort [max|high|medium|low], /unblock, /autoapprove [on|off], /translate <目标语言>")
     print("每次模型请求执行命令前，客户端会要求人工确认。仅用于测试。")
     if EXEC_FILTER:
         print('将使用以下过滤器以过滤命令:', EXEC_FILTER)
@@ -1201,6 +1202,14 @@ def repl(session_path=None, load_path=None):
                         _current_model = newVal
                     print(f"已切换模型为: {_current_model}")
                 continue
+            elif cmd == "/effort":
+                global _reasoning_effort
+                if not arg:
+                    print(f"当前思考强度: {_reasoning_effort}")
+                else:
+                    _reasoning_effort = arg.strip()
+                    print(f"已设置思考强度为: {_reasoning_effort}")
+                continue
             elif cmd == "/translate":
                 if not arg:
                     print("用法: /translate <目标语言>，例如: /translate 简体中文")
@@ -1233,7 +1242,7 @@ def repl(session_path=None, load_path=None):
                     print(f"{C.GREEN}翻译完成，已写回最后一条消息。{C.RESET}")
                 continue
             else:
-                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot, /model, /unblock, /translate")
+                print("未知特殊命令。支持: /i, /input, /exit, /save, /saveas, /load, /chroot, /model, /effort, /unblock, /translate")
                 continue
         else:
             # Normal user input: send as user message
