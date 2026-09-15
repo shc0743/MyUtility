@@ -1,6 +1,8 @@
 /data
 /sdcard
 /storage/emulated/0
+/sdcard/Download
+/storage/emulated/0/Download
 /data/data/com.termux
 /data/data/com.termux/files
 /data/data/com.termux/files/usr
