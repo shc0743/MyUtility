@@ -34,7 +34,16 @@ ancc() {
 
     # d8 输出到独立目录，避免污染当前目录
     mkdir -p "$dex_out"
-    if ! d8 --release --min-api 26 --lib "$android_jar" --output "$dex_out" "${class_files[@]}"; then
+    local d8_input_args=()
+    if [[ ${#class_files[@]} -gt 100 ]]; then
+        local arg_file="$temp_dir/d8-class-files.txt"
+        : > "$arg_file"
+        printf '%s\n' "${class_files[@]}" > "$arg_file"
+        d8_input_args=("@$arg_file")
+    else
+        d8_input_args=("${class_files[@]}")
+    fi
+    if ! d8 --release --min-api 26 --lib "$android_jar" --output "$dex_out" "${d8_input_args[@]}"; then
         echo "Build FAILED: D8 error"
         rm -rf "$temp_dir"
         return 1
@@ -93,22 +102,19 @@ ancc() {
         fi
 
         chmod -w "$out_apk"
-        echo "Built multi-dex APK: ${main_class_name}.apk from ${#java_files[@]} Java file(s)"
-        echo "Contents:"
-        printf '  %s\n' "${dex_names[@]}"
-        echo "Note: this APK only contains dex files (no AndroidManifest.xml/resources)."
+        echo "Built ${main_class_name}.apk from ${#java_files[@]} Java file(s)"
     fi
 
     # 清理临时目录
     rm -rf "$temp_dir"
 
-    # 多文件提示
-    if [[ ${#java_files[@]} -gt 1 ]]; then
-        echo "Available classes in dex:"
-        for java_file in "${java_files[@]}"; do
-            echo "  $(basename "$java_file" .java)"
-        done
-    fi
+    # # 多文件提示
+    # if [[ ${#java_files[@]} -gt 1 ]]; then
+        # echo "Available classes in dex:"
+        # for java_file in "${java_files[@]}"; do
+            # echo "  $(basename "$java_file" .java)"
+        # done
+    # fi
 }
 
 ancc "$@"
