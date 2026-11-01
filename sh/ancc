@@ -4,62 +4,112 @@ ancc() {
         echo "Usage: ancc file1.java [file2.java ...]"
         return 1
     fi
-    
+
     local java_files=("$@")
     local main_class_name=$(basename "${java_files[0]}" .java)
     local temp_dir=$(mktemp -d)
-    
-    # 在临时目录中编译
-    if ! javac --release 11 -cp $android_jar -d "$temp_dir" "${java_files[@]}"; then
+    local dex_out="$temp_dir/dexout"
+
+    # 编译
+    if ! javac --release 11 -cp "$android_jar" -d "$temp_dir" "${java_files[@]}"; then
         echo "Build FAILED: Java compilation error"
         rm -rf "$temp_dir"
         return 1
     fi
-    
-    # 获取临时目录中的所有.class文件（包括子目录）
+
+    # 收集 .class（含子目录）
     local class_files=()
     while IFS= read -r -d '' file; do
         class_files+=("$file")
     done < <(find "$temp_dir" -name "*.class" -type f -print0)
-    
+
     if [[ ${#class_files[@]} -eq 0 ]]; then
         echo "Build FAILED: No .class files generated in $temp_dir"
-        echo "Directory contents:"
         find "$temp_dir" -type f
         rm -rf "$temp_dir"
         return 1
     fi
-    
+
     echo "Packaging ${#class_files[@]} class files"
-    
-    # 打包所有.class文件
-    if ! d8 --release --min-api 24 --lib "$android_jar" --output . "${class_files[@]}"; then
+
+    # d8 输出到独立目录，避免污染当前目录
+    mkdir -p "$dex_out"
+    if ! d8 --release --min-api 26 --lib "$android_jar" --output "$dex_out" "${class_files[@]}"; then
         echo "Build FAILED: D8 error"
         rm -rf "$temp_dir"
         return 1
     fi
-    
-    if [[ -f "classes.dex" ]]; then
-        chmod 444 "classes.dex"
-        echo "Built ${main_class_name}.dex from ${#java_files[@]} Java file(s)"
-        mv -f classes.dex "${main_class_name}.dex"
-    else
-        echo "Build FAILED: classes.dex not found"
+
+    # 按标准命名顺序收集 classes.dex / classes2.dex / classes3.dex ...
+    local dex_names=()
+    local i=1 name
+    while :; do
+        if [[ $i -eq 1 ]]; then
+            name="classes.dex"
+        else
+            name="classes${i}.dex"
+        fi
+        [[ -f "$dex_out/$name" ]] || break
+        dex_names+=("$name")
+        ((i++))
+    done
+
+    local dex_count=${#dex_names[@]}
+
+    if [[ $dex_count -eq 0 ]]; then
+        echo "Build FAILED: could not find classes to pack"
+        find "$dex_out" -type f
         rm -rf "$temp_dir"
         return 1
     fi
-    
+
+    if [[ $dex_count -eq 1 ]]; then
+        chmod -w "$dex_out/classes.dex"
+        mv -f "$dex_out/classes.dex" "${main_class_name}.dex"
+        echo "Built ${main_class_name}.dex from ${#java_files[@]} Java file(s)"
+    else
+        local out_apk="$PWD/${main_class_name}.apk"
+        rm -f "$out_apk"
+
+        if command -v zip >/dev/null 2>&1; then
+            if ! ( cd "$dex_out" && zip -q -X "$out_apk" "${dex_names[@]}" ); then
+                echo "Build FAILED: failed to package $out_apk"
+                rm -rf "$temp_dir"
+                return 1
+            fi
+        else
+            echo "WARN: zip not found"
+            if ! ( cd "$dex_out" && jar cf "$out_apk" "${dex_names[@]}" ); then
+                echo "Build FAILED: failed to package $out_apk"
+                rm -rf "$temp_dir"
+                return 1
+            fi
+        fi
+
+        if [[ ! -f "$out_apk" ]]; then
+            echo "Build FAILED: $out_apk not created"
+            rm -rf "$temp_dir"
+            return 1
+        fi
+
+        chmod -w "$out_apk"
+        echo "Built multi-dex APK: ${main_class_name}.apk from ${#java_files[@]} Java file(s)"
+        echo "Contents:"
+        printf '  %s\n' "${dex_names[@]}"
+        echo "Note: this APK only contains dex files (no AndroidManifest.xml/resources)."
+    fi
+
     # 清理临时目录
     rm -rf "$temp_dir"
-    
+
     # 多文件提示
     if [[ ${#java_files[@]} -gt 1 ]]; then
         echo "Available classes in dex:"
         for java_file in "${java_files[@]}"; do
-            local cls_name=$(basename "$java_file" .java)
-            echo "  $cls_name"
+            echo "  $(basename "$java_file" .java)"
         done
     fi
 }
 
 ancc "$@"
+

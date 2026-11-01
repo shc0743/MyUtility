@@ -38,6 +38,7 @@ BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")  # �
 API_KEY_PATH = Path(os.environ.get("API_KEY_PATH", "/data/data/com.termux/files/home/skapikey.txt"))
 EXEC_FILTER = os.environ.get('DSNATIVE2_EXEC_FILTER', None)
 EXEC_RUNNER = os.environ.get('DSNATIVE2_EXEC_RUNNER', None)
+DSNATIVE2_ALLOW_ALL_VISION = os.environ.get('DSNATIVE2_ALLOW_ALL_VISION', 'false')
 DEFAULT_MODEL = os.environ.get('DSNATIVE2_DEFAULT_MODEL', "deepseek-v4-pro")
 _current_model = DEFAULT_MODEL  # 可在运行时通过 /model 切换
 TIMEOUT = 600
@@ -738,7 +739,8 @@ def tool_read_image(args, cwd, virtual_root):
     """
     # 模型白名单检查：当前模型不支持视觉时，无论模型传入什么参数都直接拒绝
     if _current_model not in VISION_MODELS:
-        return ("Error: The current model cannot recognize image. You should never call this tool again.", None)
+        if DSNATIVE2_ALLOW_ALL_VISION != "true":
+            return ("Error: The current model cannot recognize image. You should never call this tool again.", None)
 
     path_raw = args.get("name", "")
     if not path_raw:
